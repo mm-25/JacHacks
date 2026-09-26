@@ -1,7 +1,7 @@
 # Sherry Hackathon Build Plan
 
 Status: ready to execute  
-Team: 3 developers / AI agents  
+Team: 3 human builders, each optionally assisted by their own AI tool  
 Target: one hackathon demo build across web, desktop, and mobile
 
 ## 1. Outcome
@@ -52,20 +52,20 @@ This is the golden path. Every implementation decision should protect it.
 
 ## 4. Recommended implementation shape
 
-Use a monorepo so contracts and UI primitives stay shared, but give each agent exclusive ownership of a small set of top-level paths.
+Use a monorepo so contracts stay shared, but give each person exclusive ownership of a platform area. AI tools work inside the lane of the person operating them; they do not own branches, approve contracts, or merge code.
 
 ```text
 apps/
-  web/                 # Agent 2
-  desktop/             # Agent 3
-  mobile/              # Agent 3
+  web/                 # User 2
+  desktop/             # User 2 — thin wrapper around web
+  mobile/              # User 3
 packages/
-  contracts/           # Agent 1; other agents consume only
-  api-client/          # Agent 1
-  ui/                  # Agent 2
-  config/              # Agent 1
+  contracts/           # User 1; other users consume only
+  api-client/          # User 1
+  ui-web/              # User 2
+  config/              # User 1
 services/
-  api/                  # Agent 1
+  api/                  # User 1
 docs/                   # Product lead / designated integrator
 ```
 
@@ -81,9 +81,13 @@ Suggested stack:
 
 Cost-minimizing fallback: use Supabase free tier, deploy web to Vercel/Cloudflare Pages, keep desktop local, and distribute the Expo build through Expo Go.
 
-## 5. Agent ownership
+## 5. Human ownership
 
-### Agent 1 — Platform and data
+There are four technical surfaces and three people. Web and desktop are intentionally paired because the desktop app is a thin Tauri shell around the web product. This keeps each person in a distinct lane without asking two people to edit the same UI.
+
+Replace `User 1`, `User 2`, and `User 3` with actual names before the project begins.
+
+### User 1 — Backend and shared contracts
 
 Owns:
 
@@ -100,47 +104,55 @@ Delivers:
 - Realtime or refresh-based synchronization.
 - API tests and deployment instructions.
 
-Must not edit `apps/web`, `apps/desktop`, or `apps/mobile` except through a separately reviewed integration PR.
+Must not edit `apps/web`, `apps/desktop`, or `apps/mobile` except through a separately reviewed integration PR requested by that platform's owner.
 
-### Agent 2 — Web and shared visual system
+### User 2 — Web and desktop
 
 Owns:
 
 - `apps/web/**`
-- `packages/ui/**`
+- `apps/desktop/**`
+- `packages/ui-web/**`
 
 Delivers:
 
 - Responsive memory list, search, create, detail, and delete flows.
 - Shared visual tokens and reusable web components.
+- Tauri desktop wrapper around the web application.
+- Desktop quick capture and packaging for the demo machine.
 - Demo seed-state presentation.
 - Browser-level happy-path tests.
 
 Must consume the API through `packages/api-client`; must not create direct database queries.
 
-### Agent 3 — Desktop and mobile
+### User 3 — Mobile
 
 Owns:
 
-- `apps/desktop/**`
 - `apps/mobile/**`
 
 Delivers:
 
-- Desktop packaging and quick capture.
 - Mobile memory list, create, search, and sync status.
-- Platform build/run documentation.
+- Mobile build/run documentation and demo-device preparation.
 
-Must consume `packages/contracts` and `packages/api-client` without changing them directly. Contract changes are requested through an issue or a small PR assigned to Agent 1.
+Must consume `packages/contracts` and `packages/api-client` without changing them directly. Contract changes are requested from User 1 through an issue or documented handoff.
+
+### Human control rule
+
+- Each person is accountable for code produced with their AI tool.
+- An AI tool may propose changes only within its user's owned paths.
+- No AI tool merges a PR, changes a shared contract, edits another person's lane, or resolves a merge conflict without that human explicitly reviewing the action.
+- Cross-platform decisions are made by the three people, then recorded in the contract or integration board.
 
 ## 6. Git protocol for zero-surprise collaboration
 
 ### Branches
 
 - Protected integration branch: `main`.
-- One long-lived branch per agent: `agent/platform`, `agent/web`, `agent/clients`.
-- Short task branches from the agent branch when helpful: `agent/web/memory-list`.
-- Never let two agents implement the same file or migration.
+- One long-lived branch per person/platform: `backend`, `web-desktop`, `mobile`.
+- Short task branches when helpful: `web-desktop/memory-list`.
+- Never let two people or their AI tools implement the same file or migration.
 
 ### Pull requests
 
@@ -152,25 +164,25 @@ Must consume `packages/contracts` and `packages/api-client` without changing the
 
 ### Shared-file rules
 
-- Root config, lockfile, shared contracts, and migrations have one owner: Agent 1.
-- Agent 1 lands dependency/config changes early; other agents rebase afterward.
+- Root config, lockfile, shared contracts, and migrations have one owner: User 1.
+- User 1 lands dependency/config changes early; Users 2 and 3 rebase afterward.
 - No drive-by formatting or repository-wide refactors during the hackathon.
-- Additive contract changes are preferred. Breaking changes require all three agents to acknowledge the change before merge.
+- Additive contract changes are preferred. Breaking changes require all three people to acknowledge the change before merge.
 - Database migrations are immutable after merge. Fixes use a new migration.
 
 ### Integration rhythm
 
-- Start of block: pull/rebase and post the files each agent expects to touch.
-- Every 2–3 hours: merge one tested vertical increment per active agent.
+- Start of block: pull/rebase and post the files each person expects to touch.
+- Every 2–3 hours: merge one tested vertical increment per active platform.
 - Before sleep or handoff: push all useful work, update the PR description, and record blockers.
 - Final 4 hours: feature freeze; only integration, demo reliability, and critical bug fixes.
 
 ## 7. Interface-first sequence
 
-1. Agent 1 defines `Memory`, `MemorySource`, request/response schemas, and error shapes.
-2. All agents approve fixtures before implementation diverges.
-3. Agent 1 publishes a mocked API client immediately.
-4. Agents 2 and 3 build against fixtures while Agent 1 implements the real backend.
+1. User 1 drafts `Memory`, `MemorySource`, request/response schemas, and error shapes.
+2. All three people approve the fixtures before implementation diverges.
+3. User 1 publishes a mocked API client immediately.
+4. Users 2 and 3 build against fixtures while User 1 implements the real backend.
 5. Replace mock transport with the real API without changing screen code.
 
 Required seed fixture:
@@ -207,4 +219,3 @@ Required seed fixture:
 - Avoid live provider OAuth, paid AI calls, or app-store dependencies in the primary demo.
 - Freeze versions and lockfiles before final integration.
 - Prepare one laptop with all three clients already authenticated and seeded.
-

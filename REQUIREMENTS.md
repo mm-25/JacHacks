@@ -80,7 +80,7 @@ Priority vocabulary: P0 = demo-critical, P1 = important, P2 = stretch
 
 ## 3. API contract
 
-Canonical schemas live in `packages/contracts`. Only the platform owner merges contract changes.
+Canonical schemas live in `packages/contracts`. Only User 1, the backend owner, merges contract changes after the affected platform owners approve them.
 
 ### Memory
 
@@ -172,4 +172,3 @@ Given the API is unavailable, when a client attempts to load or save, then the U
 - CI is green on `main`.
 - Each platform has a short runbook and known-limitations section.
 - P1/P2 omissions are recorded rather than hidden.
-

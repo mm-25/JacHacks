@@ -4,30 +4,31 @@ This roadmap is organized by milestones rather than calendar dates so it can fit
 
 ## Milestone 0 — Align and scaffold (0–10%)
 
-Goal: all three agents can work without touching the same files.
+Goal: all three people can work without touching the same files.
 
-### Agent 1 — Platform
+### User 1 — Backend
 
 - Create workspace structure, root scripts, CI, and environment example.
 - Define shared schemas, API errors, and seed fixtures.
 - Scaffold database and mock API client.
 
-### Agent 2 — Web
+### User 2 — Web and desktop
 
 - Scaffold web app inside its owned path.
+- Scaffold the thin Tauri desktop wrapper without duplicating web screens.
 - Establish routes, tokens, and fixture-driven screens.
 - Build the base shell and empty/loading states.
 
-### Agent 3 — Clients
+### User 3 — Mobile
 
-- Scaffold desktop and mobile apps inside owned paths.
-- Verify both can import shared contracts and call the mock client.
-- Prove one screen on each target device.
+- Scaffold the mobile app inside its owned path.
+- Verify it can import shared contracts and call the mock client.
+- Prove one screen on the target mobile device.
 
 ### Integration checkpoint
 
-- Merge scaffolding in this order: platform → web → clients.
-- Freeze root tooling after all agents can start their app.
+- Merge scaffolding in this order: User 1 backend/contracts → User 2 web/desktop → User 3 mobile.
+- Freeze root tooling after all three people can start their platform.
 - Tag `hackathon-scaffold`.
 
 Exit criteria: CI passes; all apps boot; fixture types compile everywhere.
@@ -36,28 +37,28 @@ Exit criteria: CI passes; all apps boot; fixture types compile everywhere.
 
 Goal: create on one surface and view on another.
 
-### Agent 1 — Platform
+### User 1 — Backend
 
 - Implement memory table/model.
 - Implement create, list, detail, and idempotency.
 - Deploy the first shared API environment.
 
-### Agent 2 — Web
+### User 2 — Web and desktop
 
 - Implement list, create, and detail against fixtures.
 - Switch to the real API once the transport is ready.
 - Display source, timestamp, and sync/error states.
+- Run the same flows inside the desktop wrapper and add quick capture.
 
-### Agent 3 — Clients
+### User 3 — Mobile
 
 - Implement mobile list/create.
-- Implement desktop list and quick capture.
-- Verify both clients against fixtures, then the real API.
+- Verify mobile against fixtures, then the real API.
 
 ### Integration checkpoint
 
 - Run AT-01 cross-surface creation.
-- Resolve contract issues through Agent 1; do not patch around schema differences per client.
+- Resolve contract issues through User 1; do not patch around schema differences per client.
 - Tag `hackathon-vertical-slice`.
 
 Exit criteria: create on mobile; view on web and desktop.
@@ -66,19 +67,20 @@ Exit criteria: create on mobile; view on web and desktop.
 
 Goal: complete the core product promise.
 
-### Agent 1 — Platform
+### User 1 — Backend
 
 - Implement text search, soft delete, reset, and refresh/realtime transport.
 - Add API tests for search, duplicate create, and deletion.
 
-### Agent 2 — Web
+### User 2 — Web and desktop
 
 - Implement search, delete confirmation, responsive behavior, and recovery states.
 - Add the polished demo dataset and first-run experience.
+- Verify search and delete inside the packaged desktop build.
 
-### Agent 3 — Clients
+### User 3 — Mobile
 
-- Add search and detail on mobile/desktop.
+- Add search and detail on mobile.
 - Add sync indicators and manual retry.
 - Add local offline queue if time permits after all P0 flows pass.
 
@@ -94,20 +96,21 @@ Exit criteria: the entire golden path works across three surfaces.
 
 Goal: make the demo resilient and legible.
 
-### Agent 1 — Platform
+### User 1 — Backend
 
 - Add health checks, structured request IDs, seed reset, and deployment notes.
 - Review workspace isolation and secret handling.
 
-### Agent 2 — Web
+### User 2 — Web and desktop
 
 - Complete loading, empty, offline, failure, and long-content states.
 - Improve keyboard/focus behavior and demo presentation.
+- Test the packaged desktop build on the presentation laptop.
 
-### Agent 3 — Clients
+### User 3 — Mobile
 
-- Test on the actual demo laptop and phone.
-- Fix keyboard, safe-area, window sizing, and restart behavior.
+- Test on the actual demo phone.
+- Fix keyboard, safe-area, and restart behavior.
 - Validate client recovery after API interruption.
 
 ### Integration checkpoint
@@ -145,20 +148,20 @@ Each stretch feature must remain behind a feature flag and must not alter the pr
 
 ## Shared integration board
 
-Track every cross-agent dependency with this shape:
+Track every cross-user dependency with this shape:
 
 | ID | Owner | Consumer | Interface or file | Needed by | Status |
 |---|---|---|---|---|---|
-| INT-001 | Agent 1 | Agents 2–3 | `Memory` schema | Milestone 0 | Planned |
-| INT-002 | Agent 1 | Agents 2–3 | API base URL and auth mode | Milestone 1 | Planned |
-| INT-003 | Agent 2 | Agent 3 | Design tokens | Milestone 1 | Planned |
-| INT-004 | Agent 1 | All | Demo reset procedure | Milestone 3 | Planned |
+| INT-001 | User 1 | Users 2–3 | `Memory` schema | Milestone 0 | Planned |
+| INT-002 | User 1 | Users 2–3 | API base URL and auth mode | Milestone 1 | Planned |
+| INT-003 | User 2 | User 3 | Shared visual tokens | Milestone 1 | Planned |
+| INT-004 | User 1 | All | Demo reset procedure | Milestone 3 | Planned |
 
 ## Merge order at each checkpoint
 
-1. Agent 1 merges contracts/migrations/API.
-2. Agent 2 rebases and merges web/UI changes.
-3. Agent 3 rebases and merges desktop/mobile changes.
+1. User 1 merges contracts, migrations, and API.
+2. User 2 rebases and merges web and desktop changes.
+3. User 3 rebases and merges mobile changes.
 4. Integrator runs the golden path on `main`.
 5. If integration fails, revert the smallest offending PR; do not patch directly on `main` under pressure.
 
@@ -169,4 +172,3 @@ Track every cross-agent dependency with this shape:
 - If physical mobile builds are unstable by 65%, use Expo Go on the known working device.
 - If realtime is unstable, use manual refresh with honest UI.
 - If AI summarization is unreliable or slow, disable the feature flag; the core demo does not depend on it.
-
