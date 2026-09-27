@@ -21,7 +21,10 @@ mobile and desktop clients can call the same `/function/<name>` endpoints.
 
 import from datetime { datetime, timezone, timedelta }
 
-glob CAPTURE_CHANNELS: list[str] = ["app", "mcp", "extension", "import"];
+# How an item reached Sherry: typed in a Sherry app, saved by an assistant via
+# MCP, captured from a website by the browser extension, captured from local AI
+# tool logs by the desktop app, or bulk-imported.
+glob CAPTURE_CHANNELS: list[str] = ["app", "mcp", "extension", "desktop", "import"];
 glob SOURCE_TYPES: list[str] = ["manual_note", "conversation_excerpt", "import"];
 glob SOURCE_PLATFORMS: list[str] = [
          "web",
@@ -29,12 +32,15 @@ glob SOURCE_PLATFORMS: list[str] = [
          "mobile",
          "chatgpt",
          "claude",
-         "gemini"
+         "gemini",
+         "codex",
+         "antigravity"
      ];
 glob MAX_CONTENT: int = 20000;
 glob MAX_TAGS: int = 20;
 glob MAX_TAG_LEN: int = 40;
 glob MAX_LABEL_LEN: int = 120;
+glob MAX_CONTEXT_LEN: int = 200;
 glob DEFAULT_LIMIT: int = 25;
 glob MAX_LIMIT: int = 100;
 
@@ -53,6 +59,7 @@ node Memory {
         source_platform: str = "web",
         source_label: str = "",
         source_url: str = "",
+        source_context: str = "",
         captured_via: str = "app",
         conversation_id: str = "",
         idempotency_key: str = "",
@@ -67,6 +74,7 @@ obj MemorySource {
         platform: str,
         label: str | None = None,
         url: str | None = None,
+        context: str | None = None,
         capturedVia: str = "app",
         conversationId: str | None = None;
 }
@@ -116,6 +124,16 @@ def _now_iso -> str {
 }
 
 
+"""Read a field that newer versions of Sherry added to a node type. Nodes saved
+before the field existed don't have it, so fall back to its default. Always
+use this for fields added after launch (source_context, context,
+captured_via on chats, sent_at)."""
+def _field(n: any, name: str, fallback: str) -> str {
+    value = getattr(n, name, fallback);
+    return str(value) if value is not None else fallback;
+}
+
+
 def _workspace -> Workspace {
     found = [root-->][?:Workspace];
     if len(found) > 0 {
@@ -136,6 +154,7 @@ def _view(m: Memory, ws: Workspace) -> MemoryView {
             platform=m.source_platform,
             label=m.source_label or None,
             url=m.source_url or None,
+            context=_field(m, "source_context", "") or None,
             capturedVia=m.captured_via or "app",
             conversationId=m.conversation_id or None
         ),
@@ -161,6 +180,9 @@ def _matches(m: Memory, needle: str) -> bool {
         return True;
     }
     if needle in m.source_label.lower() or needle in m.source_platform {
+        return True;
+    }
+    if needle in _field(m, "source_context", "").lower() {
         return True;
     }
     for t in m.tags {
@@ -254,7 +276,8 @@ def:priv create_memory(
     source_type: str = "manual_note",
     source_label: str = "",
     source_url: str = "",
-    captured_via: str = "app"
+    captured_via: str = "app",
+    source_context: str = ""
 ) -> MemoryView {
     ws = _workspace();
     key = idempotency_key.strip();
@@ -290,6 +313,10 @@ def:priv create_memory(
     if url and not (url.startswith("https://") or url.startswith("http://")) {
         raise ValueError("Source URL must start with http:// or https://.");
     }
+    context = source_context.strip();
+    if len(context) > MAX_CONTEXT_LEN {
+        raise ValueError(f"Source context can be at most {MAX_CONTEXT_LEN} characters.");
+    }
     stamp = _now_iso();
     m = Memory(
         content=body,
@@ -298,6 +325,7 @@ def:priv create_memory(
         source_platform=source_platform,
         source_label=label,
         source_url=url,
+        source_context=context,
         captured_via=captured_via,
         idempotency_key=key,
         created_at=stamp,
@@ -346,6 +374,8 @@ node CapturedConversation {
         external_id: str,
         url: str = "",
         title: str = "",
+        context: str = "",
+        captured_via: str = "extension",
         created_at: str = "",
         updated_at: str = "",
         summarized_hash: str = "",
@@ -361,6 +391,7 @@ node CapturedMessage {
         role: str,
         text: str,
         position: int = 0,
+        sent_at: str = "",
         captured_at: str = "",
         updated_at: str = "";
 }

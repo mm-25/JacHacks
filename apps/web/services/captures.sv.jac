@@ -1,20 +1,27 @@
-"""Capture API for the Sherry browser extension.
+"""Capture API: how whole AI chats get into Sherry.
 
-The extension reads every message of a chat on chatgpt.com / claude.ai and
-sends it here. Each chat becomes one `CapturedConversation` (with its
-`CapturedMessage`s) under the user's workspace, plus ONE summary `Memory`
-that is rewritten as the chat grows:
+Two capturers send chats here, with the same shape:
+- the browser extension (`captured_via="extension"`): chatgpt.com, claude.ai,
+  gemini.google.com;
+- the desktop app (`captured_via="desktop"`): local Claude Code, Codex and
+  Antigravity session logs.
+
+Each chat becomes one `CapturedConversation` (with its `CapturedMessage`s)
+under the user's workspace, plus ONE summary `Memory` that is rewritten as
+the chat grows:
 
     Workspace --> CapturedConversation --> CapturedMessage ...
-    Workspace --> Memory (captured_via="extension", conversation_id=<chat>)
+    Workspace --> Memory (captured_via=<capturer>, conversation_id=<chat>)
 
-Captures are idempotent: messages are keyed by the extension (the site's
-message id, or position + role), so re-sending a chat every few seconds only
-stores what changed. Summaries only run when the transcript changed since the
-last summary.
+Captures are idempotent: messages are keyed by the capturer (the site's
+message id, position + role, or the desktop scraper's row id), so re-sending a
+chat every few seconds only stores what changed. Summaries only run when the
+transcript changed since the last summary. The shared data contract is in
+data-schema-specification.md at the repo root.
 """
 
 import hashlib;
+import from datetime { datetime }
 import from services.memories {
     Workspace,
     Memory,
@@ -24,15 +31,18 @@ import from services.memories {
     _workspace,
     _view,
     _now_iso,
-    _clean_tags
+    _clean_tags,
+    _field
 }
 import from services.summarizer { TranscriptLine, summarize }
 
-glob CAPTURE_PLATFORMS: list[str] = ["chatgpt", "claude", "gemini"];
+glob CAPTURE_PLATFORMS: list[str] = ["chatgpt", "claude", "gemini", "codex", "antigravity"];
+glob CAPTURERS: list[str] = ["extension", "desktop"];
 glob ROLES: list[str] = ["user", "assistant"];
 glob MAX_MESSAGES_PER_CAPTURE: int = 300;
 glob MAX_MESSAGE_CHARS: int = 100000;
 glob MAX_TITLE_CHARS: int = 200;
+glob MAX_CONTEXT_CHARS: int = 200;
 
 
 obj CaptureResult {
@@ -58,7 +68,8 @@ obj TranscriptMessage {
     has role: str,
         text: str,
         position: int,
-        capturedAt: str;
+        capturedAt: str,
+        sentAt: str | None = None;
 }
 
 
@@ -67,6 +78,8 @@ obj ConversationView {
         platform: str,
         url: str,
         title: str,
+        context: str | None,
+        capturedVia: str,
         messageCount: int,
         messages: list[TranscriptMessage],
         summarizedAt: str | None = None,
@@ -108,22 +121,48 @@ def _transcript_hash(msgs: list[CapturedMessage]) -> str {
 }
 
 
+"""The original send time of a message as ISO-8601 UTC, or "" when missing or
+unparseable (capturers may not know it; Sherry never invents one)."""
+def _sent_at(raw: any) -> str {
+    text = str(raw or "").strip();
+    if not text or len(text) > 40 {
+        return "";
+    }
+    try {
+        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"));
+    } except ValueError {
+        return "";
+    }
+    if parsed.tzinfo is None {
+        return "";
+    }
+    return parsed.isoformat(timespec="milliseconds").replace("+00:00", "Z");
+}
+
+
 def _summary_key(c: CapturedConversation) -> str {
     return f"conv-{c.platform}-{c.external_id}"[:128];
 }
 
 
 """Store (or update) the messages of one chat. `messages` is a list of
-`{key, role, text, position}` objects; unchanged messages are ignored."""
+`{key, role, text, position, createdAt?}` objects (`createdAt` = when the
+message was originally sent, ISO-8601); unchanged messages are ignored.
+`context` is the project or folder a desktop session belongs to."""
 def:priv capture_conversation(
     platform: str,
     conversation_id: str,
     url: str = "",
     title: str = "",
-    messages: list[dict] | None = None
+    messages: list[dict] | None = None,
+    captured_via: str = "extension",
+    context: str = ""
 ) -> CaptureResult {
     if platform not in CAPTURE_PLATFORMS {
         raise ValueError(f"Unknown capture platform '{platform}'.");
+    }
+    if captured_via not in CAPTURERS {
+        raise ValueError(f"Unknown capturer '{captured_via}'.");
     }
     external_id = conversation_id.strip();
     if not external_id or len(external_id) > 200 {
@@ -148,6 +187,8 @@ def:priv capture_conversation(
             external_id=external_id,
             url=link,
             title=title.strip()[:MAX_TITLE_CHARS],
+            context=context.strip()[:MAX_CONTEXT_CHARS],
+            captured_via=captured_via,
             created_at=stamp,
             updated_at=stamp
         );
@@ -170,6 +211,9 @@ def:priv capture_conversation(
     if title.strip() {
         c.title = title.strip()[:MAX_TITLE_CHARS];
     }
+    if context.strip() {
+        c.context = context.strip()[:MAX_CONTEXT_CHARS];
+    }
     existing: dict[str, CapturedMessage] = {};
     for m in [c-->][?:CapturedMessage] {
         existing[m.key] = m;
@@ -181,6 +225,7 @@ def:priv capture_conversation(
         role = str(raw.get("role", ""));
         text = str(raw.get("text", "")).strip()[:MAX_MESSAGE_CHARS];
         position = int(raw.get("position", 0));
+        sent_at = _sent_at(raw.get("createdAt"));
         if not key or role not in ROLES or not text {
             continue;
         }
@@ -193,6 +238,9 @@ def:priv capture_conversation(
                 old.updated_at = stamp;
                 updated += 1;
             }
+            if sent_at and not _field(old, "sent_at", "") {
+                old.sent_at = sent_at;
+            }
             continue;
         }
         fresh = CapturedMessage(
@@ -200,6 +248,7 @@ def:priv capture_conversation(
             role=role,
             text=text,
             position=position,
+            sent_at=sent_at,
             captured_at=stamp,
             updated_at=stamp
         );
@@ -270,7 +319,8 @@ def:priv summarize_conversation(
             source_platform=platform,
             source_label=result.title[:120],
             source_url=c.url,
-            captured_via="extension",
+            source_context=_field(c, "context", ""),
+            captured_via=_field(c, "captured_via", "extension") or "extension",
             conversation_id=jid(c),
             idempotency_key=key,
             created_at=stamp,
@@ -283,6 +333,7 @@ def:priv summarize_conversation(
         existing.tags = _clean_tags(result.tags) or existing.tags;
         existing.source_label = result.title[:120] or existing.source_label;
         existing.source_url = c.url or existing.source_url;
+        existing.source_context = _field(c, "context", "") or _field(existing, "source_context", "");
         existing.updated_at = stamp;
     }
     c.summarized_hash = digest;
@@ -311,13 +362,16 @@ def:priv get_conversation(id: str) -> ConversationView | None {
             platform=c.platform,
             url=c.url,
             title=c.title,
+            context=_field(c, "context", "") or None,
+            capturedVia=_field(c, "captured_via", "extension") or "extension",
             messageCount=len(ordered),
             messages=[
                 TranscriptMessage(
                     role=m.role,
                     text=m.text,
                     position=m.position,
-                    capturedAt=m.captured_at
+                    capturedAt=m.captured_at,
+                    sentAt=_field(m, "sent_at", "") or None
                 ) for m in ordered
             ],
             summarizedAt=c.summarized_at or None,

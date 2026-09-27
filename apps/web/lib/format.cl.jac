@@ -6,7 +6,9 @@ glob PLATFORM_LABELS: dict[str, str] = {
          "mobile": "Mobile",
          "chatgpt": "ChatGPT",
          "claude": "Claude",
-         "gemini": "Gemini"
+         "gemini": "Gemini",
+         "codex": "Codex",
+         "antigravity": "Antigravity"
      };
 
 glob TYPE_LABELS: dict[str, str] = {
@@ -103,6 +105,9 @@ def:pub capture_label(via: str) -> str {
     if via == "extension" {
         return "Browser extension (auto-captured chat)";
     }
+    if via == "desktop" {
+        return "Desktop app (local AI tool logs)";
+    }
     if via == "import" {
         return "Import";
     }
@@ -117,6 +122,9 @@ def:pub capture_badge(via: str) -> str {
     }
     if via == "extension" {
         return "via extension";
+    }
+    if via == "desktop" {
+        return "via desktop";
     }
     return "";
 }

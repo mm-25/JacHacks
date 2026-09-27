@@ -153,6 +153,10 @@ def:pub MemoryDetail(
                         <dt key="label-t">Label</dt>
                         <dd key="label-d">{src.label}</dd>
                     }}
+                    {if src.context {
+                        <dt key="ctx-t">Project</dt>
+                        <dd key="ctx-d">{src.context}</dd>
+                    }}
                     {if src.url {
                         <dt key="link-t">Link</dt>
                         <dd key="link-d">

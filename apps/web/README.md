@@ -80,7 +80,7 @@ curl -X POST localhost:8000/user/login -H 'Content-Type: application/json' -d '{
 | `health` | `{}` | `{ok, service, time}` |
 | `list_memories` | `{query?, cursor?, limit?}` | `{data: Memory[], nextCursor, total}` |
 | `get_memory` | `{id}` | `Memory` or `null` |
-| `create_memory` | `{content, source_platform, idempotency_key, tags?, source_type?, source_label?, source_url?, captured_via?}` | `Memory` |
+| `create_memory` | `{content, source_platform, idempotency_key, tags?, source_type?, source_label?, source_url?, source_context?, captured_via?}` | `Memory` |
 | `delete_memory` | `{id}` | `true` / `false` |
 | `restore_memory` | `{id}` | `Memory` or `null` |
 | `load_demo_data` | `{}` | Marks the workspace as a demo and adds the sample memories if missing. Idempotent. Returns the first page |
@@ -90,7 +90,7 @@ curl -X POST localhost:8000/user/login -H 'Content-Type: application/json' -d '{
 
 | Function | Body | Returns (`data.result`) |
 |---|---|---|
-| `capture_conversation` | `{platform, conversation_id, url?, title?, messages: [{key, role, text, position}]}` | `{conversationId, received, added, updated, totalMessages, ignored, summaryStale}` |
+| `capture_conversation` | `{platform, conversation_id, url?, title?, context?, captured_via?, messages: [{key, role, text, position, createdAt?}]}` | `{conversationId, received, added, updated, totalMessages, ignored, summaryStale}` |
 | `summarize_conversation` | `{platform, conversation_id, force?}` | `{status: created\|updated\|unchanged\|ignored\|empty\|not_found, memory, engine: claude\|basic, note}` |
 | `get_conversation` | `{id}` (the memory's `source.conversationId`) | `{id, platform, url, title, messageCount, messages[], summarizedAt, summaryEngine, summaryNote}` |
 
@@ -127,6 +127,9 @@ The API key is the account's token from `/user/login`. It's also shown in the we
 under *Connect an AI assistant*. In this Jac server mode, the token is created at sign-up,
 never expires, and isn't rotated. The MCP server sends it as
 `Authorization: Bearer <SHERRY_API_KEY>` to `SHERRY_API_URL`.
+
+The full data contract shared by every Sherry app (fields, allowed values, how the
+desktop scraper maps to it) is in [data-schema-specification.md](../../data-schema-specification.md).
 
 ## Known limitations
 

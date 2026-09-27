@@ -63,6 +63,8 @@
   --p-chatgpt: #1a9a7d;
   --p-claude: #ab570a;
   --p-gemini: #0070f3;
+  --p-codex: #171717;
+  --p-antigravity: #4c2889;
 
   /* Hero mesh (develop → preview → ship) */
   --mesh-a: #007cf0;
@@ -112,6 +114,8 @@
     --p-chatgpt: #50e3c2;
     --p-claude: #f5a623;
     --p-gemini: #52a8ff;
+    --p-codex: #ededed;
+    --p-antigravity: #c4b0f0;
     --mesh-opacity: 0.38;
     color-scheme: dark;
   }
@@ -459,6 +463,8 @@ button.card:hover { box-shadow: var(--shadow-4); }
 .chip-chatgpt { --chip: var(--p-chatgpt); }
 .chip-claude { --chip: var(--p-claude); }
 .chip-gemini { --chip: var(--p-gemini); }
+.chip-codex { --chip: var(--p-codex); }
+.chip-antigravity { --chip: var(--p-antigravity); }
 
 .tag {
   display: inline-block; padding: 0 7px; border-radius: 4px;
