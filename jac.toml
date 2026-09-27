@@ -1,0 +1,7 @@
+[project]
+name = "JacHacks"
+version = "0.1.0"
+entry = "main.jac"
+
+[dependencies]
+# Add your jaclang dependencies here
