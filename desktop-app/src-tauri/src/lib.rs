@@ -31,11 +31,21 @@ fn run_pm2(action: String) -> Result<String, String> {
     }
 }
 
+#[tauri::command]
+fn read_scraped_data() -> Result<String, String> {
+    let home = std::env::var("HOME").unwrap_or_default();
+    let path = format!("{}/.sherry/scraped_data.json", home);
+    match std::fs::read_to_string(&path) {
+        Ok(content) => Ok(content),
+        Err(e) => Err(format!("Failed to read {}: {}", path, e)),
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
-        .invoke_handler(tauri::generate_handler![run_pm2])
+        .invoke_handler(tauri::generate_handler![run_pm2, read_scraped_data])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

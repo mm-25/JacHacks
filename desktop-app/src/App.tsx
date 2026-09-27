@@ -69,11 +69,9 @@ function App() {
   useEffect(() => {
     const interval = setInterval(async () => {
       try {
-        const res = await fetch("/scraped_data.json?t=" + Date.now());
-        if (res.ok) {
-          const data = await res.json();
-          setAutoScrapedData(data);
-        }
+        const dataStr = await invoke<string>('read_scraped_data');
+        const data = JSON.parse(dataStr);
+        setAutoScrapedData(data);
       } catch (e) {
         // Ignore if file doesn't exist yet
       }
