@@ -1,0 +1,22 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "sherry",
+  "main": "src/index.js",
+  "compatibility_date": "2026-09-26",
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "sherry",
+      // Replace with the id printed by `npx wrangler d1 create sherry`.
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "vars": {
+    // https://<project>.supabase.co - Supabase project that owns the logins.
+    "SUPABASE_URL": ""
+  }
+  // Secrets (set with `npx wrangler secret put <NAME>`, never in this file):
+  //   ANTHROPIC_API_KEY    enables Claude-written chat summaries
+  //   SUPABASE_JWT_SECRET  only for Supabase projects on the legacy HS256 secret
+}
