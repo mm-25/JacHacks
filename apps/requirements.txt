@@ -1,0 +1,9 @@
+# Python packages for apps/web, apps/extension and apps/mcp, pinned to the
+# versions they were built and tested with (Jac's syntax changes between releases).
+# From the repo root:
+#   python3 -m venv .venv && .venv/bin/pip install -r apps/requirements.txt
+jaclang==0.16.7
+jac-client==0.3.25
+anthropic==1.8.0
+mcp[cli]==2.2.0
+certifi

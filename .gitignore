@@ -1,6 +1,14 @@
+# Dependencies and environments
 node_modules/
+.venv/
+__pycache__/
+
+# Jac and Vite build/runtime data
 .jac/
+.vite/
+
+# Logs, secrets, OS files
 *.log
 *.err
-.DS_Store
 .env
+.DS_Store

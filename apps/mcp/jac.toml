@@ -1,0 +1,6 @@
+[project]
+name = "sherry-mcp"
+version = "0.1.0"
+description = "Sherry MCP server: lets claude.ai and ChatGPT save and search Sherry memories"
+entry-point = "main.jac"
+kind = "cli"
