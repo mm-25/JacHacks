@@ -20,14 +20,18 @@ glob LATEST_VERSION: str = "2025-11-25";
 glob PLATFORMS: list[str] = ["claude", "chatgpt", "gemini"];
 
 glob INSTRUCTIONS: str = (
-    "Sherry is the user's personal memory layer, shared across their AI assistants "
-    + "and devices. Use it to keep continuity:\n"
-    + "- When the user asks you to remember, save or note something - or to save this "
-    + "chat - call save_memory. For a chat, write a concise summary yourself: decisions, "
-    + "facts and preferences the user stated, and next steps. Keep names, numbers and dates.\n"
-    + "- Before answering questions about the user's past decisions, preferences, projects "
-    + "or earlier conversations (including ones in other assistants), call search_memories.\n"
-    + "- Mention the source (platform and date) when you rely on a memory.\n"
+    "Sherry is the user's personal memory, shared across their AI assistants and "
+    + "devices. Use it on your own initiative - the user should never have to ask:\n"
+    + "- At the start of every conversation, call search_memories with a few keywords "
+    + "from the user's first message (or list_recent_memories when there is no clear "
+    + "topic), and use what you find to answer with their context. Search again whenever "
+    + "they refer to past work, decisions, preferences, people or projects. Don't narrate "
+    + "the lookup; mention the source (platform and date) when you rely on a memory.\n"
+    + "- When the user states something worth keeping - a decision, a preference, a fact "
+    + "about themselves or their work, a plan or a deadline - call save_memory with one "
+    + "self-contained sentence, without asking. Never save secrets (passwords, keys, "
+    + "financial or health details) or small talk, nothing the user asks you not to "
+    + "keep, and nothing you already found in Sherry.\n"
     + "- Only delete a memory when the user explicitly asks."
 );
 
@@ -35,7 +39,7 @@ glob TOOLS: list[dict] = [
     {
         "name": "save_memory",
         "title": "Save to Sherry",
-        "description": "Save something to the user's Sherry memory so they (and their other AI assistants and devices) can find it later. Use it when the user asks you to remember or save something, or to save/summarize the current chat. `content` should be self-contained: write the fact, decision or summary so it makes sense without this conversation. Saving the same content twice is harmless.",
+        "description": "Save something to the user's Sherry memory so they (and their other AI assistants and devices) can find it later. Call it on your own whenever the user states a decision, preference, fact about themselves or their work, plan or deadline worth keeping - and when they ask you to remember something or to save/summarize the chat. `content` should be one self-contained statement that makes sense without this conversation. Never save secrets. Saving the same content twice is harmless.",
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -52,7 +56,7 @@ glob TOOLS: list[dict] = [
     {
         "name": "search_memories",
         "title": "Search Sherry",
-        "description": "Search the user's Sherry memories (case-insensitive text search over content, tags and source names), newest first. Use it before answering questions about the user's past decisions, preferences, projects or earlier conversations - including ones held in other AI assistants.",
+        "description": "Search the user's Sherry memories (case-insensitive text search over content, tags, source names and projects), newest first. Call it on your own at the start of every conversation with keywords from the user's message, and whenever they mention past decisions, preferences, projects, people or earlier conversations - including ones held in other AI assistants.",
         "inputSchema": {
             "type": "object",
             "properties": {

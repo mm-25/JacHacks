@@ -80,6 +80,16 @@ def:pub resource_url(request: any) -> str {
 }
 
 
+"""The MCP resource the client named is this server (trailing slash allowed)."""
+def _is_our_resource(request: any, resource: str) -> bool {
+    trimmed = resource;
+    while trimmed.endswith("/") {
+        trimmed = trimmed[:len(trimmed) - 1];
+    }
+    return trimmed == resource_url(request) or trimmed == base_url(request);
+}
+
+
 def _with_params(target: str, params: dict) -> str {
     url: any = construct("URL", [target]);
     for key in Object.keys(params) {
@@ -346,6 +356,7 @@ async def:pub authorize_start(request: any, env: any) -> any {
     client_id = text_of(q.get("client_id"));
     client: any = await _client(env, client_id);
     if not client {
+        console.log("sherry oauth: authorize rejected, unknown client " + client_id);
         return _problem_page("Unknown app.", "This connection request came from an app Sherry doesn't know. Try connecting again from your assistant.");
     }
     uris = _client_uris(client);
@@ -354,6 +365,7 @@ async def:pub authorize_start(request: any, env: any) -> any {
         redirect_uri = text_of(uris[0]);
     }
     if redirect_uri not in uris {
+        console.log("sherry oauth: authorize rejected, redirect_uri not registered: " + redirect_uri);
         return _problem_page("Invalid redirect.", "The app asked to return to an address it didn't register.");
     }
     state = text_of(q.get("state"));
@@ -362,10 +374,12 @@ async def:pub authorize_start(request: any, env: any) -> any {
     }
     challenge = text_of(q.get("code_challenge"));
     if not challenge or text_of(q.get("code_challenge_method")) != "S256" {
+        console.log("sherry oauth: authorize rejected, no S256 PKCE");
         return _redirect(_with_params(redirect_uri, {"error": "invalid_request", "error_description": "PKCE with S256 is required.", "state": state}));
     }
     resource = text_of(q.get("resource"));
-    if resource and resource != resource_url(request) and resource != base_url(request) {
+    if resource and not _is_our_resource(request, resource) {
+        console.log("sherry oauth: authorize rejected, unknown resource " + resource);
         return _redirect(_with_params(redirect_uri, {"error": "invalid_target", "state": state}));
     }
     request_id = random_token(24);
@@ -575,7 +589,7 @@ async def:pub mcp_caller(request: any, env: any) -> McpCaller | None {
         return None;
     }
     audience = text_of(row.resource);
-    if audience and audience != resource_url(request) and audience != base_url(request) {
+    if audience and not _is_our_resource(request, audience) {
         return None;
     }
     return McpCaller(
