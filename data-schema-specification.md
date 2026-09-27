@@ -10,21 +10,24 @@ platform's data lands in the same database in the same shape.
 
 ## 1. Where the data lives
 
-There is **one database**: the Sherry server in `apps/web` (Jac). Jac stores the
-data as a graph in SQLite files under `apps/web/.jac/data/`:
+There is **one database**: Cloudflare D1, behind the hosted Sherry API in
+`apps/cloud` (a Cloudflare Worker written in Jac). It holds memories, captured
+chats and API keys. **Accounts** (email + password) live in Supabase Auth; D1
+only stores each account's Supabase user id.
 
-- `sherry-web.db`: memories and captured chats.
-- `main.db`: accounts.
-
-Apps never open those files. They call the Sherry API over HTTP:
+Apps never open the database. They call the Sherry API over HTTP:
 
 ```
 web app ─┐
 extension ┤
-MCP ──────┼──▶  Sherry API (apps/web)  ──▶  Jac graph database
+MCP ──────┼──▶  Sherry API (apps/cloud, Cloudflare Worker)  ──▶  D1 database
 desktop ──┤     POST /function/<name>
-mobile ───┘
+mobile ───┘                  ▲
+                             └── logins checked against Supabase Auth
 ```
+
+The old local Jac server (`apps/web` with `jac start`, data in
+`apps/web/.jac/data/`) is no longer used. Nothing in it was copied to D1.
 
 Each account has its own private workspace. An app only ever sees the data of
 the account whose key it uses.
