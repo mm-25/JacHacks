@@ -7,7 +7,7 @@ with entry {
     brain_dir = os.path.join(os.path.expanduser("~"), ".gemini/antigravity/brain");
     claude_projects_dir = os.path.join(os.path.expanduser("~"), ".claude/projects");
     codex_sessions_dir = os.path.join(os.path.expanduser("~"), ".codex/sessions");
-    out_file = os.path.join(os.getcwd(), "apps", "web", "public", "scraped_data.json");
+    out_file = os.path.join(os.getcwd(), "desktop-app", "public", "scraped_data.json");
     
     print("Starting Comprehensive Agent Scraper (Antigravity + Claude + Codex)...");
     
