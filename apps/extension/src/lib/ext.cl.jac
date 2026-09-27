@@ -19,7 +19,7 @@ def:pub default_settings -> dict {
         "apiUrl": DEFAULT_API_URL,
         "apiKey": "",
         "paused": False,
-        "sites": {"chatgpt": True, "claude": True}
+        "sites": {"chatgpt": True, "claude": True, "gemini": True}
     };
 }
 

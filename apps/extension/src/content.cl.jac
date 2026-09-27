@@ -1,4 +1,4 @@
-"""Sherry content script - runs inside chatgpt.com and claude.ai.
+"""Sherry content script - runs inside chatgpt.com, claude.ai and gemini.google.com.
 
 Watches the open chat and captures every message:
 1. A MutationObserver notices page changes (debounced); a 5-second interval

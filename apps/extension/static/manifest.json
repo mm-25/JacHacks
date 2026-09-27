@@ -3,12 +3,13 @@
   "name": "Sherry – AI chat memory",
   "short_name": "Sherry",
   "version": "0.1.0",
-  "description": "Captures your ChatGPT and Claude conversations into your Sherry memory and keeps a summary of each chat.",
+  "description": "Captures your ChatGPT, Claude and Gemini conversations into your Sherry memory and keeps a summary of each chat.",
   "permissions": ["storage"],
   "host_permissions": [
     "https://chatgpt.com/*",
     "https://chat.openai.com/*",
     "https://claude.ai/*",
+    "https://gemini.google.com/*",
     "http://localhost/*",
     "http://127.0.0.1/*"
   ],
@@ -18,7 +19,7 @@
   },
   "content_scripts": [
     {
-      "matches": ["https://chatgpt.com/*", "https://chat.openai.com/*", "https://claude.ai/*"],
+      "matches": ["https://chatgpt.com/*", "https://chat.openai.com/*", "https://claude.ai/*", "https://gemini.google.com/*"],
       "js": ["content.js"],
       "run_at": "document_idle"
     }

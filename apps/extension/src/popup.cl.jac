@@ -10,7 +10,7 @@ import from .lib.ext {
     DEFAULT_API_URL
 }
 
-glob SITE_NAMES: dict[str, str] = {"chatgpt": "ChatGPT", "claude": "Claude"};
+glob SITE_NAMES: dict[str, str] = {"chatgpt": "ChatGPT", "claude": "Claude", "gemini": "Gemini"};
 
 
 def el(id: str) -> any {
@@ -71,7 +71,7 @@ async def render_page -> None {
     if not info["ok"] {
         set_text(
             "page-info",
-            "Open a chat on chatgpt.com or claude.ai. If one is already open, reload it.",
+            "Open a chat on chatgpt.com, claude.ai or gemini.google.com. If one is already open, reload it.",
             "muted"
         );
         button.disabled = True;
@@ -136,6 +136,7 @@ async def fill_settings -> None {
     el("api-key").value = settings["apiKey"] or "";
     el("site-chatgpt").checked = bool(settings["sites"]["chatgpt"]);
     el("site-claude").checked = bool(settings["sites"]["claude"]);
+    el("site-gemini").checked = bool(settings["sites"]["gemini"]);
     el("paused").checked = bool(settings["paused"]);
 }
 
@@ -148,7 +149,8 @@ async def store_settings -> None {
             "paused": bool(el("paused").checked),
             "sites": {
                 "chatgpt": bool(el("site-chatgpt").checked),
-                "claude": bool(el("site-claude").checked)
+                "claude": bool(el("site-claude").checked),
+                "gemini": bool(el("site-gemini").checked)
             }
         }
     );
@@ -193,7 +195,7 @@ with entry {
     render_status();
     el("save").addEventListener("click", lambda (e: any) { save_and_test(); });
     el("summarize").addEventListener("click", lambda (e: any) { summarize_now(); });
-    for id in ["site-chatgpt", "site-claude", "paused"] {
+    for id in ["site-chatgpt", "site-claude", "site-gemini", "paused"] {
         el(id).addEventListener("change", lambda (e: any) { store_settings(); });
     }
 }

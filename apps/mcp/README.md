@@ -31,7 +31,7 @@ asks the user to confirm every tool that isn't marked read-only.
 ```bash
 # 1. Sherry must be running (apps/web): http://localhost:8000
 # 2. From the repo root, once:
-.venv/bin/pip install "mcp[cli]"
+.venv/bin/pip install -r apps/requirements.txt
 # 3. Start the MCP server:
 cd apps/mcp
 ../../.venv/bin/jac run main.jac          # http://127.0.0.1:8100/mcp
@@ -73,6 +73,14 @@ Or do it by hand:
      paste the URL and choose **OAuth**. Developer mode needs Plus, Pro, Business,
      Enterprise or Education.
      See OpenAI's [developer mode guide](https://developers.openai.com/api/docs/guides/developer-mode).
+     Add it from **Settings → Apps**, then click **Connect**; the **+** on the Plugins page
+     opens a plugin-builder chat instead.
+   - **Gemini:** on gemini.google.com (desktop), open **Settings → Connected Apps**, and under
+     **Custom apps** choose **Add a custom app**. Paste the URL, leave **Advanced features**
+     empty (Gemini registers itself), then **Next**. Google currently limits custom apps to
+     personal Google accounts, 18+, in the US, with the language set to English and Keep
+     Activity on. Gemini asks you to confirm every write. Use `@Sherry` in a prompt to point
+     Gemini at it. See Google's [custom apps help](https://support.google.com/gemini/answer/17209137).
 4. The assistant opens the **Connect your memory** page. Sign in with your Sherry
    email and password and click **Allow access**.
 5. Try it: "Save a summary of this chat to Sherry." It shows up in the Sherry web

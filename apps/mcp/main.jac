@@ -92,7 +92,23 @@ def _sherry_token -> str {
 }
 
 
-"""Which assistant is calling, from the MCP client's self-reported name."""
+def _platform_from_name(name: str) -> str {
+    lowered = name.lower();
+    if "claude" in lowered or "anthropic" in lowered {
+        return "claude";
+    }
+    if "openai" in lowered or "chatgpt" in lowered {
+        return "chatgpt";
+    }
+    if "gemini" in lowered or "google" in lowered {
+        return "gemini";
+    }
+    return "";
+}
+
+
+"""Which assistant is calling: the MCP client's self-reported name first, then
+the name it registered with when the user connected it (OAuth client_name)."""
 def _client_platform(ctx: Context | None) -> tuple[str, str] {
     name = "";
     try {
@@ -101,17 +117,13 @@ def _client_platform(ctx: Context | None) -> tuple[str, str] {
     } except Exception {
         name = "";
     }
-    lowered = name.lower();
-    if "claude" in lowered or "anthropic" in lowered {
-        return ("claude", name);
+    platform = _platform_from_name(name);
+    if platform {
+        return (platform, name);
     }
-    if "openai" in lowered or "chatgpt" in lowered {
-        return ("chatgpt", name);
-    }
-    if "gemini" in lowered or "google" in lowered {
-        return ("gemini", name);
-    }
-    return ("", name);
+    access = get_access_token();
+    registered = provider.client_label(str(access.client_id)) if access else "";
+    return (_platform_from_name(registered), name or registered);
 }
 
 

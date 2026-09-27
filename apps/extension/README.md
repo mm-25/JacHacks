@@ -1,11 +1,11 @@
 # Sherry browser extension (Jac)
 
 A Chrome extension written in Jac. It captures **every message** of your
-chats on chatgpt.com and claude.ai into your Sherry workspace, and keeps
+chats on chatgpt.com, claude.ai and gemini.google.com into your Sherry workspace, and keeps
 **one summary memory per chat**, refreshed as the chat grows.
 
 ```
-chatgpt.com / claude.ai page
+chatgpt.com / claude.ai / gemini.google.com page
   └─ content.js      reads the chat (src/lib/sites.cl.jac), sends new/changed messages
        └─ background.js   holds the API key, calls the Sherry API
             └─ Sherry (apps/web): capture_conversation, summarize_conversation
@@ -24,7 +24,7 @@ cd apps/extension
    **Connect an AI assistant** and copy the URL and API key.
 3. Click the Sherry extension icon, paste both, then click **Save & test**. It
    should say *Connected ✓*.
-4. Open (or reload) a chat on chatgpt.com or claude.ai. The popup shows
+4. Open (or reload) a chat on chatgpt.com, claude.ai or gemini.google.com. The popup shows
    *N messages on this page*.
 
 After changing any `.cl.jac` file, rebuild and click the reload icon on the
@@ -50,7 +50,7 @@ extension card in `chrome://extensions`. Then reload the chat tabs.
 
 ## Testing with the new accounts
 
-Use the new test Gmail accounts on chatgpt.com and claude.ai, not personal ones.
+Use the new test Gmail accounts on chatgpt.com, claude.ai and gemini.google.com, not personal ones.
 For each site:
 
 1. Start a chat, send a couple of messages, and wait for the reply to finish.
@@ -83,10 +83,11 @@ To find the new ones, right-click a message → Inspect. Only that file is site-
 
 ## Known limitations
 
-- **The selectors in `sites.cl.jac` were not tested against the live sites.** They
-  were written from these sites' known markup and tested against mock pages. Verify
-  them with the test accounts first.
-- claude.ai exposes no message ids. If an earlier message is deleted, later
+- **Live-site status:** the ChatGPT and Claude selectors are confirmed on the live
+  sites. The Gemini ones (`user-query` / `model-response` / `message-content`) were
+  written from Gemini's known markup and tested against mock pages only; verify them
+  with the popup's message count first.
+- claude.ai and Gemini expose no message ids. If an earlier message is deleted, later
   messages shift position, and some may be stored again under their new keys.
 - Only chats with an id in the URL are captured. A brand-new ChatGPT chat is
   captured as soon as its URL changes to `/c/<id>`.

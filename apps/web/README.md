@@ -13,7 +13,7 @@ The same server also exposes the HTTP API that the desktop and mobile clients ca
 ```bash
 # one-time, from the repo root
 python3 -m venv .venv
-.venv/bin/pip install jaclang jac-client certifi
+.venv/bin/pip install -r apps/requirements.txt
 
 # from apps/web
 cd apps/web

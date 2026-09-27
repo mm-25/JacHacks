@@ -11,16 +11,24 @@ sites - use the extension popup's "Messages on this page" count to verify.
 
 glob:pub CHATGPT: str = "chatgpt";
 glob:pub CLAUDE: str = "claude";
+glob:pub GEMINI: str = "gemini";
 
 glob CHATGPT_MESSAGE_SELECTOR: str = "[data-message-author-role]";
 glob CHATGPT_STOP_SELECTOR: str = "[data-testid='stop-button'], button[aria-label='Stop streaming']";
 glob CLAUDE_USER_SELECTOR: str = "[data-testid='user-message']";
 glob CLAUDE_ASSISTANT_SELECTOR: str = ".font-claude-response, .font-claude-message";
 glob CLAUDE_STREAMING_SELECTOR: str = "[data-is-streaming='true']";
-# Text-bearing blocks of a Claude reply. Tool-use strips ("Search Sherry used",
+# gemini.google.com renders each turn as <user-query> + <model-response> custom
+# elements. The reply text is in <message-content>; the optional "Show thinking"
+# panel sits outside it, so it's never captured.
+glob GEMINI_TURN_SELECTOR: str = "user-query, model-response";
+glob GEMINI_USER_TEXT_SELECTOR: str = ".query-text";
+glob GEMINI_REPLY_SELECTOR: str = "message-content";
+glob GEMINI_STREAMING_SELECTOR: str = "button.send-button.stop, button[aria-label='Stop response'], model-response [aria-busy='true']";
+# Text-bearing blocks of an assistant reply (Claude, Gemini). Tool-use strips ("Search Sherry used",
 # with an icon-font glyph) are interface controls, not prose, so they're skipped.
-glob CLAUDE_PROSE_SELECTOR: str = "p, ul, ol, pre, h1, h2, h3, h4, h5, h6, blockquote, table";
-glob CLAUDE_CHROME_SELECTOR: str = "button, [role='button'], summary, details, [aria-hidden='true']";
+glob PROSE_SELECTOR: str = "p, ul, ol, pre, h1, h2, h3, h4, h5, h6, blockquote, table";
+glob CHROME_SELECTOR: str = "button, [role='button'], summary, details, [aria-hidden='true']";
 # Icon fonts render from the Unicode private-use area; never real message text.
 glob PRIVATE_USE_PATTERN: str = "[\\uE000-\\uF8FF]";
 
@@ -45,29 +53,30 @@ def _match(pattern: str, text: str) -> str {
 
 def _text_of(el: any) -> str {
     raw: any = el.innerText or el.textContent or "";
-    cleaned: any = str(raw).replace(new(RegExp, PRIVATE_USE_PATTERN, "g"), "");
+    js_text: any = String(raw);
+    cleaned: any = js_text.replace(new(RegExp, PRIVATE_USE_PATTERN, "g"), "");
     return str(cleaned).strip();
 }
 
 
-"""True when an ancestor of `el` (not `el` itself) inside `root` matches."""
-def _inside(root: any, el: any, selector: str) -> bool {
+"""True when an ancestor of `el` (not `el` itself) inside `container` matches."""
+def _inside(container: any, el: any, selector: str) -> bool {
     parent: any = el.parentElement;
     found: any = parent.closest(selector) if parent else None;
-    return bool(found) and bool(root.contains(found));
+    return bool(found) and bool(container.contains(found));
 }
 
 
-"""A Claude reply's prose only, one block per paragraph; falls back to all
+"""An assistant reply's prose only, one block per paragraph; falls back to all
 text when the reply has no recognised blocks (e.g. a markup change)."""
-def _claude_reply_text(el: any) -> str {
+def _reply_text(el: any) -> str {
     parts: list[str] = [];
-    blocks: list[any] = list(el.querySelectorAll(CLAUDE_PROSE_SELECTOR));
+    blocks: list[any] = list(el.querySelectorAll(PROSE_SELECTOR));
     for block in blocks {
-        if _inside(el, block, CLAUDE_PROSE_SELECTOR) {
+        if _inside(el, block, PROSE_SELECTOR) {
             continue;
         }
-        chrome: any = block.closest(CLAUDE_CHROME_SELECTOR);
+        chrome: any = block.closest(CHROME_SELECTOR);
         if chrome and el.contains(chrome) {
             continue;
         }
@@ -89,6 +98,9 @@ def:pub detect_site -> str {
     if host == "claude.ai" or host.endswith(".claude.ai") {
         return CLAUDE;
     }
+    if host == "gemini.google.com" {
+        return GEMINI;
+    }
     return "";
 }
 
@@ -102,18 +114,22 @@ def:pub conversation_id(site: str) -> str {
     if site == CLAUDE {
         return _match("/chat/([A-Za-z0-9-]+)", path);
     }
+    if site == GEMINI {
+        # /app/<id>, /u/1/app/<id> (second account), /gem/<gem>/<id>
+        return _match("/(?:app|gem/[^/]+)/([A-Za-z0-9_-]+)", path);
+    }
     return "";
 }
 
 
 def:pub conversation_title(site: str) -> str {
     title = str(_doc().title or "").strip();
-    for suffix in [" - Claude", " | Claude", " - ChatGPT", " | ChatGPT"] {
+    for suffix in [" - Claude", " | Claude", " - ChatGPT", " | ChatGPT", " - Gemini", " | Gemini"] {
         if title.endswith(suffix) {
             title = title[:len(title) - len(suffix)].strip();
         }
     }
-    if title == "ChatGPT" or title == "Claude" {
+    if title == "ChatGPT" or title == "Claude" or title == "Gemini" or title == "Google Gemini" {
         return "";
     }
     return title;
@@ -134,6 +150,9 @@ def:pub is_streaming(site: str) -> bool {
     }
     if site == CLAUDE {
         return bool(doc.querySelector(CLAUDE_STREAMING_SELECTOR));
+    }
+    if site == GEMINI {
+        return bool(doc.querySelector(GEMINI_STREAMING_SELECTOR));
     }
     return False;
 }
@@ -174,11 +193,39 @@ def _claude_messages -> list[dict] {
             continue;
         }
         role = "user" if el.matches(CLAUDE_USER_SELECTOR) else "assistant";
-        text = _text_of(el) if role == "user" else _claude_reply_text(el);
+        text = _text_of(el) if role == "user" else _reply_text(el);
         if not text {
             continue;
         }
         # claude.ai exposes no message ids; position + role is stable for a chat.
+        out.append(
+            {"key": f"{position}-{role}", "role": role, "text": text, "position": position}
+        );
+        position += 1;
+    }
+    return out;
+}
+
+
+def _gemini_messages -> list[dict] {
+    out: list[dict] = [];
+    nodes: list[any] = list(_doc().querySelectorAll(GEMINI_TURN_SELECTOR));
+    position = 0;
+    for el in nodes {
+        role = "user" if str(el.tagName).lower() == "user-query" else "assistant";
+        text = "";
+        if role == "user" {
+            query: any = el.querySelector(GEMINI_USER_TEXT_SELECTOR);
+            text = _text_of(query) if query else _text_of(el);
+        } else {
+            reply: any = el.querySelector(GEMINI_REPLY_SELECTOR);
+            text = _reply_text(reply) if reply else "";
+        }
+        if not text {
+            continue;
+        }
+        # Gemini exposes no stable per-message id either; position + role is
+        # stable for a chat, like claude.ai.
         out.append(
             {"key": f"{position}-{role}", "role": role, "text": text, "position": position}
         );
@@ -195,6 +242,9 @@ def:pub read_messages(site: str) -> list[dict] {
     }
     if site == CLAUDE {
         return _claude_messages();
+    }
+    if site == GEMINI {
+        return _gemini_messages();
     }
     return [];
 }
