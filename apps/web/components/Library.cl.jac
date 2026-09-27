@@ -20,7 +20,6 @@ import from .MemoryCard { MemoryCard }
 import from .PendingCard { PendingCard }
 import from .MemoryDetail { MemoryDetail }
 import from .SyncStatus { SyncStatus }
-import from .ConnectPanel { ConnectPanel }
 import from ..lib.demo { is_demo_account }
 import from ..lib.format { new_idempotency_key }
 import from ..lib.browser {
@@ -52,7 +51,13 @@ glob POLL_MS: int = 5000;
 glob PAGE_SIZE: int = 25;
 glob TOAST_MS: int = 8000;
 
-def:pub Library(account: str, onSignOut: Callable[[], None]) -> JsxElement {
+def:pub Library(
+    account: str,
+    kind: str,
+    title: str,
+    onConnect: Callable[[], None],
+    onSignOut: Callable[[], None]
+) -> JsxElement {
     has memories: list[MemoryView] = [],
         total: int = 0,
         next_cursor: str | None = None,
@@ -172,83 +177,36 @@ def:pub Library(account: str, onSignOut: Callable[[], None]) -> JsxElement {
     demo = is_demo_account(account);
 
     return
-        <div className="app">
-            <header className="topbar">
-                <div className="topbar-brand">
-                    <div className="logo" aria-hidden="true">S</div>
-                    <span className="wordmark">Sherry</span>
+        <div className="page page-wide">
+            <header className="page-head page-head-row">
+                <div>
+                    <h1 className="page-title">{title}</h1>
+                    <p className="page-sub">
+                        {"Summaries of the chats Sherry captured from your AI tools."
+                            if kind == "chat"
+                            else "Notes you saved and facts your assistants saved for you."}
+                    </p>
                 </div>
-                <div className="topbar-spacer"/>
-                <SyncStatus
-                    online={online}
-                    syncing={syncing}
-                    has_error={load_error}
-                    unsaved={unsaved}
-                    last_synced={last_synced}
-                    now_ms={tick}
-                    onRetry={lambda { refresh(False); }}
-                />
                 <div className="topbar-actions">
+                    <SyncStatus
+                        online={online}
+                        syncing={syncing}
+                        has_error={load_error}
+                        unsaved={unsaved}
+                        last_synced={last_synced}
+                        now_ms={tick}
+                        onRetry={lambda { refresh(False); }}
+                    />
                     <button
                         type="button"
                         className="btn btn-ghost btn-icon"
                         onClick={lambda e: MouseEvent { refresh(False); }}
-                        aria-label="Refresh library"
+                        aria-label="Refresh"
                         title="Refresh"
                         disabled={syncing}
                     >
                         <Icon name="refresh"/>
                     </button>
-                    <button
-                        type="button"
-                        className="btn btn-ghost btn-icon"
-                        onClick={lambda e: MouseEvent { menu_open = not menu_open; }}
-                        aria-label="Account menu"
-                        aria-haspopup="menu"
-                        aria-expanded={"true" if menu_open else "false"}
-                    >
-                        <Icon name="user"/>
-                    </button>
-                    {if menu_open {
-                        <div key="slot1" className="menu" role="menu">
-                            <div className="menu-header">
-                                <div className="menu-header-label">Signed in as</div>
-                                <div className="menu-header-value">
-                                    {account or "Your account"}
-                                </div>
-                            </div>
-                            <button
-                                type="button"
-                                role="menuitem"
-                                className="menu-item"
-                                onClick={lambda e: MouseEvent {
-                                    menu_open = False;
-                                    connect_open = True;
-                                }}
-                            >
-                                Connect apps and assistants
-                            </button>
-                            {if demo {
-                                <button
-                                    key="reset"
-                                    type="button"
-                                    role="menuitem"
-                                    className="menu-item"
-                                    onClick={lambda e: MouseEvent { reset_workspace(); }}
-                                >
-                                    Reset to demo data
-                                </button>
-                            }}
-                            <button
-                                type="button"
-                                role="menuitem"
-                                className="menu-item menu-item-danger"
-                                onClick={lambda e: MouseEvent { sign_out(); }}
-                            >
-                                Sign out
-                            </button>
-                        </div>
-                    }}
                 </div>
             </header>
             <main className={"layout has-detail" if selected_id else "layout"}>
@@ -289,7 +247,9 @@ def:pub Library(account: str, onSignOut: Callable[[], None]) -> JsxElement {
                             </kbd>
                         } }
                     </div>
-                    <Composer onSave={save_new}/>
+                    {if kind != "chat" {
+                        <Composer key="composer" onSave={save_new}/>
+                    }}
                     {if load_error and len(memories) > 0 {
                         <div key="slot3" className="alert alert-warn" role="status">
                             <span className="alert-body">
@@ -304,7 +264,7 @@ def:pub Library(account: str, onSignOut: Callable[[], None]) -> JsxElement {
                             </button>
                         </div>
                     }}
-                    {if len(pending) > 0 {
+                    {if len(pending) > 0 and kind != "chat" {
                         <ul key="slot4" className="list" aria-label="Waiting to sync">
                             {for p in pending {
                                 <li key={str(p["key"])}>
@@ -319,7 +279,7 @@ def:pub Library(account: str, onSignOut: Callable[[], None]) -> JsxElement {
                     }}
                     <div className="list-head">
                         <h2 className="list-title">
-                            {"Results" if query else "Library"}
+                            {"Results" if query else "Memories"}
                         </h2>
                         {if not loading {
                             <span key="slot5" className="list-count" aria-live="polite">
@@ -371,19 +331,29 @@ def:pub Library(account: str, onSignOut: Callable[[], None]) -> JsxElement {
                         </div>
                     } elif len(memories) == 0 {
                         <div key="slot8" className="empty">
-                            <p className="empty-title">Your memory is empty</p>
-                            <ol className="empty-steps">
-                                <li>Type or paste something worth keeping above.</li>
-                                <li>Pick where it came from and add a tag or two.</li>
-                                <li>Press Save, then find it here or on your phone.</li>
-                            </ol>
-                            <p style={{"marginTop": "14px"}}>
-                                Or let Claude and ChatGPT save chat summaries here.
+                            <p className="empty-title">
+                                {"No chat summaries yet" if kind == "chat" else "Your memory is empty"}
                             </p>
+                            {if kind == "chat" {
+                                <p key="chat">
+                                    Install the browser extension or desktop app. Each chat gets a summary here once it goes quiet.
+                                </p>
+                            } else {
+                                <div key="steps">
+                                    <ol className="empty-steps">
+                                        <li>Type or paste something worth keeping above.</li>
+                                        <li>Pick where it came from and add a tag or two.</li>
+                                        <li>Press Save, then find it here or on your phone.</li>
+                                    </ol>
+                                    <p style={{"marginTop": "14px"}}>
+                                        Or let Claude and ChatGPT save what matters here.
+                                    </p>
+                                </div>
+                            }}
                             <button
                                 type="button"
                                 className="btn"
-                                onClick={lambda e: MouseEvent { connect_open = True; }}
+                                onClick={lambda e: MouseEvent { onConnect(); }}
                             >
                                 Connect apps and assistants
                             </button>
@@ -454,13 +424,6 @@ def:pub Library(account: str, onSignOut: Callable[[], None]) -> JsxElement {
                     }  }
                 </section>
             </main>
-            {if connect_open {
-                <ConnectPanel
-                    key="connect"
-                    account={account}
-                    onClose={lambda { connect_open = False; }}
-                />
-            }}
             {if toast {
                 <div key="slot12" className="toast-wrap">
                     <div className="toast" role="status" aria-live="polite">

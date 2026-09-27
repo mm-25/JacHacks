@@ -226,9 +226,10 @@ def:pub health -> HealthStatus {
 
 """List active memories, newest first, with optional case-insensitive search
 over content, tags, source label and platform. `cursor` is an opaque offset
-string returned as `nextCursor` by the previous page."""
+string returned as `nextCursor` by the previous page. `kind` narrows the list:
+"chat" (summaries of captured chats) or "personal" (everything else)."""
 def:priv list_memories(
-    query: str = "", cursor: str = "", limit: int = 25
+    query: str = "", cursor: str = "", limit: int = 25, kind: str = ""
 ) -> MemoryPage {
     ws = _workspace();
     needle = query.strip().lower();
@@ -242,6 +243,13 @@ def:priv list_memories(
             m
             for m in active
             if _matches(m, needle)
+        ];
+    }
+    if kind == "chat" or kind == "personal" {
+        active = [
+            m
+            for m in active
+            if bool(_field(m, "conversation_id", "")) == (kind == "chat")
         ];
     }
     active.sort(key=_by_created, reverse=True);

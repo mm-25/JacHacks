@@ -26,6 +26,7 @@ import from .memories {
 }
 import from .captures { capture_conversation, summarize_conversation, get_conversation }
 import from .keys { create_api_key, list_api_keys, revoke_api_key }
+import from .dashboard { dashboard_stats, list_conversations }
 import from .oauth {
     protected_resource_metadata,
     authorization_server_metadata,
@@ -108,6 +109,12 @@ async def _dispatch(name: str, env: any, who: Principal, ws: str, body: any) -> 
     }
     if name == "revoke_api_key" {
         return [True, await revoke_api_key(env, who, ws, body)];
+    }
+    if name == "dashboard_stats" {
+        return [True, await dashboard_stats(env, who, ws, body)];
+    }
+    if name == "list_conversations" {
+        return [True, await list_conversations(env, who, ws, body)];
     }
     if name == "whoami" {
         row: any = await env.DB.prepare("SELECT is_demo FROM workspaces WHERE user_id = ?").bind(who.userId).first();

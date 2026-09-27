@@ -1,4 +1,4 @@
-"""Top-level shell: signed out -> LoginScreen, signed in -> Library.
+"""Top-level shell: signed out -> LoginScreen, signed in -> Workspace (sidebar + pages).
 
 Sign-in is Supabase Auth (lib/supabase.cl.jac). This shell also takes the
 session from the email-confirmation link, and renews the access token every
@@ -13,7 +13,7 @@ import from ..lib.supabase {
     take_session_from_url
 }
 import from .LoginScreen { LoginScreen }
-import from .Library { Library }
+import from .Workspace { Workspace }
 
 glob ACCOUNT_STORAGE_KEY: str = "sherry.account";
 glob REFRESH_CHECK_MS: int = 60000;
@@ -69,5 +69,5 @@ def:pub SherryApp -> JsxElement {
     if not signed_in {
         return <LoginScreen onSignedIn={handle_signed_in} notice={notice}/>;
     }
-    return <Library account={account} onSignOut={handle_signed_out}/>;
+    return <Workspace account={account} onSignOut={handle_signed_out}/>;
 }

@@ -151,6 +151,13 @@ async def:pub list_memories(env: any, who: Principal, ws: str, body: any) -> dic
         score = " + ".join(parts);
     }
     where = "user_id = ?1 AND deleted_at = ''" + (f" AND ({score}) > 0" if needle else "");
+    # kind: "chat" = summaries of captured chats, "personal" = everything else.
+    kind = text_of(body.kind);
+    if kind == "chat" {
+        where += " AND conversation_id != ''";
+    } elif kind == "personal" {
+        where += " AND conversation_id = ''";
+    }
     total_row: any = await query_one(env, f"SELECT COUNT(*) AS n FROM memories WHERE {where}", params);
     total = int_of(total_row.n if total_row else 0, 0);
     rows = await query_all(

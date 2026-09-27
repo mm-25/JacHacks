@@ -61,6 +61,13 @@ New here:
 | `create_api_key` `{name}` | web app session only | `{key, apiKey}`. `key` is shown only once. |
 | `list_api_keys` | web app session only | `[{id, name, prefix, createdAt, lastUsedAt}]` |
 | `revoke_api_key` `{id}` | web app session only | `bool` |
+| `dashboard_stats` | anyone signed in | Everything the Dashboard and Diagnostics pages show: chats per assistant, tool mix, use cases, recalls, lookups, top platform, pipeline health |
+| `list_conversations` `{cursor, limit}` | anyone signed in | `{data: [{id, platform, title, url, context, capturedVia, messages, updatedAt, …}], nextCursor, total}` |
+
+`list_memories` also takes `kind`: `"chat"` (summaries of captured chats) or `"personal"`
+(everything else). The connector records every lookup (`memory_lookups`) and bumps each
+returned memory's `recall_count` (`migrations/0003_usage.sql`). **Apply that migration
+(`npm run db:remote`) before deploying this code**, or the connector's searches fail.
 
 Accounts are created and signed in through Supabase, not through `/user/login`.
 

@@ -15,7 +15,7 @@ impl Library.refresh(background: bool) -> None {
     try {
         # Reads are cached client-side for 60s; a sync must hit the server.
         __jacClearCache();
-        page = await list_memories(query, cursor, limit);
+        page = await list_memories(query, cursor, limit, kind);
         if my_seq != request_seq.current {
             return;
         }
@@ -49,7 +49,7 @@ impl Library.load_more -> None {
     limit = PAGE_SIZE;
     loading_more = True;
     try {
-        page = await list_memories(query, cursor, limit);
+        page = await list_memories(query, cursor, limit, kind);
         if page is not None {
             seen = [m.id for m in memories];
             fresh: list[MemoryView] = page.data;

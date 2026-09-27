@@ -14,6 +14,7 @@ import from .util { sha256_hex, text_of, int_of, construct, is_plain_object }
 import from .auth { Principal, ensure_workspace }
 import from .oauth { McpCaller }
 import from .memories { list_memories, get_memory, create_memory, delete_memory }
+import from .dashboard { record_lookup }
 
 glob SUPPORTED_VERSIONS: list[str] = ["2024-11-05", "2025-03-26", "2025-06-18", "2025-11-25"];
 glob LATEST_VERSION: str = "2025-11-25";
@@ -117,6 +118,11 @@ def _platform_from_name(name: str) -> str {
 }
 
 
+def _caller_platform(who: McpCaller) -> str {
+    return _platform_from_name(who.clientName) or "claude";
+}
+
+
 def _brief(m: any) -> dict {
     source: any = m.source or {};
     return {
@@ -183,9 +189,12 @@ async def _call_tool(env: any, who: McpCaller, name: str, args: any) -> dict {
         limit = max(1, min(int_of(args.limit, 10), 25));
         page: any = await list_memories(env, person, ws, {"query": query, "cursor": "", "limit": limit});
         items: list[dict] = [];
+        ids: list[str] = [];
         for m in list(page.data) {
             items.append(_brief(m));
+            ids.append(text_of(m.id));
         }
+        await record_lookup(env, who.userId, _caller_platform(who), name, ids);
         if name == "search_memories" {
             return _tool_result({"query": query, "total": page.total, "memories": items});
         }
@@ -196,6 +205,7 @@ async def _call_tool(env: any, who: McpCaller, name: str, args: any) -> dict {
         if not memory {
             return _tool_error("No memory with that id (it may have been deleted).");
         }
+        await record_lookup(env, who.userId, _caller_platform(who), name, [text_of(memory.id)]);
         return _tool_result({"memory": _brief(memory)});
     }
     if name == "delete_memory" {
