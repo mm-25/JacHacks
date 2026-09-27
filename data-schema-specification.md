@@ -184,6 +184,28 @@ once per session with `captured_via: "desktop"`:
 
 Then call `summarize_conversation` when the session has been quiet for a bit.
 
+**Ready-made: [`sherry_sync.jac`](sherry_sync.jac)** does all of this: grouping,
+roles, positions, sending only what changed, summaries after 20 seconds of quiet,
+and stopping when a chat is deleted in Sherry. It never crashes the scraper when
+Sherry is offline. Use it either way:
+
+```bash
+# No code changes: sync the JSON file the scraper already writes (newest 200 rows)
+SHERRY_URL=<sherry address> SHERRY_API_KEY=<your key> jac run sherry_sync.jac
+```
+
+```jac
+# Or inside scraper.jac, to sync every row (not just the newest 200):
+import from sherry_sync { SherrySync }
+sync = SherrySync.from_env();   # before the while loop
+sync.push(all_mems);            # in the loop, before all_mems is sorted/capped
+```
+
+Optional: `SHERRY_SYNC_PLATFORMS` (for example `claude,codex`) and
+`SHERRY_SYNC_CONTEXTS` (only these projects). If the scraper adds `"session"` and
+`"context"` keys to its rows (the session id and project folder), the helper uses
+them instead of parsing ids, and project filtering starts working.
+
 **Known scraper issues to fix before syncing:**
 - **Codex ids collide.** Codex session ids are cut to 30 characters, which is
   mostly the start time in the file name. Two sessions started in the same
