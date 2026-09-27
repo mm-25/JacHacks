@@ -5,7 +5,7 @@
 
 glob:pub SETTINGS_KEY: str = "sherry.settings";
 glob:pub STATUS_KEY: str = "sherry.status";
-glob:pub DEFAULT_API_URL: str = "http://localhost:8000";
+glob:pub DEFAULT_API_URL: str = "https://sherry.sherry-cloud.workers.dev";
 
 
 def:pub chrome_api -> any {

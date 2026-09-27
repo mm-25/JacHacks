@@ -8,7 +8,7 @@ chats on chatgpt.com, claude.ai and gemini.google.com into your Sherry workspace
 chatgpt.com / claude.ai / gemini.google.com page
   └─ content.js      reads the chat (src/lib/sites.cl.jac), sends new/changed messages
        └─ background.js   holds the API key, calls the Sherry API
-            └─ Sherry (apps/web): capture_conversation, summarize_conversation
+            └─ Sherry (https://sherry.sherry-cloud.workers.dev): capture_conversation, summarize_conversation
 ```
 
 ## Build and load
@@ -20,10 +20,10 @@ cd apps/extension
 
 1. Open `chrome://extensions`, turn on **Developer mode**, click **Load unpacked**,
    and pick `apps/extension/dist`.
-2. Start Sherry (`apps/web`). In the web app, open the account menu →
-   **Connect an AI assistant** and copy the URL and API key.
-3. Click the Sherry extension icon, paste both, then click **Save & test**. It
-   should say *Connected ✓*.
+2. Sign in at https://sherry.sherry-cloud.workers.dev. Open the account menu →
+   **Connect apps and assistants** → **Create key**, and copy the key (`shr_…`, shown once).
+3. Click the Sherry extension icon. The address is already filled in; paste the key,
+   then click **Save & test**. It should say *Connected ✓*.
 4. Open (or reload) a chat on chatgpt.com, claude.ai or gemini.google.com. The popup shows
    *N messages on this page*.
 
@@ -42,7 +42,7 @@ extension card in `chrome://extensions`. Then reload the chat tabs.
   the summary if the transcript hasn't changed. **Summarize this chat now** in the
   popup forces one.
 - **Summaries:** the server uses Claude (`claude-opus-5`) when `ANTHROPIC_API_KEY`
-  is set on the Sherry server. Otherwise it writes a basic summary (first question,
+  is set on the Sherry Worker. Otherwise it writes a basic summary (first question,
   latest question, latest answer).
 - **Deleting a chat's summary** in Sherry erases that chat's captured transcript,
   and the extension stops capturing it. Undo re-enables capture.
