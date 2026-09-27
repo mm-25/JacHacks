@@ -39,6 +39,36 @@ Wipe all local data: stop the server, then `rm -rf .jac/data`. Don't rename `[pr
 in `jac.toml` without wiping too: graph data is stored per project name, while accounts are
 stored in the shared `main.db`, so existing accounts would lose their workspace.
 
+## Share it with your team
+
+The database lives wherever this server runs. To let teammates' apps (desktop,
+mobile, their browser extensions) use the same Sherry during the hackathon, put
+your running copy online:
+
+```bash
+# stop the dev server first (Ctrl+C), then:
+./share.sh
+```
+
+It runs Sherry in normal mode on port 8000 and opens a Cloudflare quick tunnel
+to it (`cloudflared` from `apps/mcp/.bin/`). It prints a public
+`https://….trycloudflare.com` address; teammates use that as the Sherry URL and
+API base. Everyone signs in with their own account, so each person's data stays
+separate. Ctrl+C stops sharing.
+
+- **Only while it runs:** it works only while your laptop is on and the script is running.
+- **New address each time:** the address changes on every start. Send teammates
+  the new one, or use a fixed domain (a named Cloudflare tunnel or an ngrok
+  static domain) for the demo.
+- **Everything is public:** anyone with the address can reach the web app and
+  create an account. Accounts are isolated from each other, but use strong
+  passwords, because there is no limit on login attempts.
+- **MCP connector:** the Sherry connector (`apps/mcp`) keeps working unchanged. It
+  talks to Sherry on `localhost:8000` on the same machine.
+
+For an always-on setup, deploy this same folder to a server and run
+`jac start main.jac --port <port>` there.
+
 ## What the web app does
 
 | Requirement | How |
@@ -143,7 +173,8 @@ desktop scraper maps to it) is in [data-schema-specification.md](../../data-sche
   because the Jac client receives `null`. The client validates first, so this is rare.
 - The MCP API key is the account's login token, so it can't be revoked or scoped separately.
   Per-tool, revocable keys would need Jac cross-user grants and are left for later.
-- The JWT signing secret is Jac's default. Set a real secret before any deployment beyond the demo.
+- Sign-in tokens are random 256-bit values stored in `main.db` (not signed JWTs). They never expire,
+  and there is no limit on login attempts, so use strong passwords once Sherry is reachable online.
 - Jac's built-in accounts store passwords as unsalted SHA-256 hashes (in `.jac/data/main.db`)
   and there is no password reset or change screen. Use a proper password hash (argon2/bcrypt)
   and a reset flow before real users sign up. For the demo, a password can be reset by writing
