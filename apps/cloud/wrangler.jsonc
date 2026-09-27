@@ -8,13 +8,13 @@
       "binding": "DB",
       "database_name": "sherry",
       // Replace with the id printed by `npx wrangler d1 create sherry`.
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      "database_id": "d49cf96e-520b-4c00-8a66-62b26f36ff23",
       "migrations_dir": "migrations"
     }
   ],
   "vars": {
     // https://<project>.supabase.co - Supabase project that owns the logins.
-    "SUPABASE_URL": ""
+    "SUPABASE_URL": "https://uddwarzmnyuktwgzvbpd.supabase.co"
   }
   // Secrets (set with `npx wrangler secret put <NAME>`, never in this file):
   //   ANTHROPIC_API_KEY    enables Claude-written chat summaries
