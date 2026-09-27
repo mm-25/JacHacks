@@ -1,9 +1,13 @@
-"""Compile the Sherry Worker's Jac sources (src/*.cl.jac) to JavaScript in
-build/js/, which src/index.js imports. Wrangler then bundles it.
+"""Build everything the Sherry Worker deploys:
+1. compile the Worker's Jac sources (src/*.cl.jac) to JavaScript in build/js/,
+   which src/index.js imports (Wrangler bundles it);
+2. build the web app (apps/web) as static files into apps/web/.jac/client/dist,
+   which the Worker serves (see "assets" in wrangler.jsonc).
 
     ../../.venv/bin/jac run build.jac      (or: npm run build)
 """
 
+import os;
 import sys;
 import shutil;
 import subprocess;
@@ -39,4 +43,20 @@ with entry {
         target.write_text(done.stdout);
         print(f"compiled {source.name} -> build/js/{target.name}");
     }
+    web = base_dir.parent / "web";
+    env = dict(os.environ);
+    try {
+        import certifi;
+        env["SSL_CERT_FILE"] = certifi.where();
+    } except ImportError {
+        env["SSL_CERT_FILE"] = env.get("SSL_CERT_FILE", "");
+    }
+    built = subprocess.run(
+        [jac, "build", "--client", "static", "main.jac"],
+        cwd=str(web), env=env, capture_output=True, text=True
+    );
+    if built.returncode != 0 {
+        raise RuntimeError(f"web build failed:\n{built.stdout[-2000:]}\n{built.stderr[-2000:]}");
+    }
+    print("built web app -> apps/web/.jac/client/dist");
 }

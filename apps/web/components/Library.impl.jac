@@ -273,15 +273,22 @@ impl Library.reset_workspace -> None {
 }
 
 # ---------- Session / navigation ----------
-impl Library.sign_out{
+impl Library.sign_out -> None {
     menu_open = False;
     set_pending([]);
-    jacLogout();
+    await end_session();
     onSignOut();
 }
 
-impl Library.handle_expired{
-    jacLogout();
+"""A request came back unauthorized: the login token may just have expired
+(e.g. the laptop slept). Renew it and retry; sign out only if that fails."""
+impl Library.handle_expired -> None {
+    renewed = await refresh_session();
+    if renewed {
+        tick = now_ms();
+        return;
+    }
+    await end_session();
     onSignOut();
 }
 

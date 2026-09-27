@@ -1,19 +1,77 @@
-"""'Connect an AI assistant' dialog: the API URL and key the Sherry MCP server
-needs so Claude, ChatGPT and other assistants can save and recall memories."""
+"""'Connect apps and assistants' dialog: the Sherry address plus API keys for
+programs that can't sign in interactively (browser extension, desktop sync,
+MCP connector). A new key is shown once; only its hash is stored, and each
+key can be revoked on its own."""
 
+import from react { useEffect }
 import from .Icon { Icon }
-import from ..lib.browser { api_key, api_origin, copy_text }
+import from ..lib.browser { api_origin, copy_text }
+import from ..lib.format { relative_time }
+import from ..lib.cloud { call_cloud }
 
 glob _NL: str = chr(10);
 
+
 def:pub ConnectPanel(account: str, onClose: Callable[[], None]) -> JsxElement {
-    has revealed: bool = False,
+    has keys: list[dict] = [],
+        loading: bool = True,
+        busy: bool = False,
+        error: str = "",
+        name: str = "",
+        new_key: str = "",
         copied: str = "";
 
-    key = api_key();
     origin = api_origin();
-    masked = key[:4] + "••••••••••••••••" + key[-4:] if len(key) > 8 else "••••••••";
-    env_block = "SHERRY_API_URL=" + origin + _NL + "SHERRY_API_KEY=" + key;
+
+    async def load_keys -> None {
+        listed = await call_cloud("list_api_keys", {});
+        loading = False;
+        if listed["ok"] {
+            keys = (listed["result"] or []) as list[dict];
+        } else {
+            error = str(listed["error"]);
+        }
+    }
+
+    useEffect(
+        lambda {
+            load_keys();
+            return lambda { };
+        },
+        []
+    );
+
+    async def create_key(e: FormEvent) -> None {
+        e.preventDefault();
+        busy = True;
+        error = "";
+        made = await call_cloud("create_api_key", {"name": name.strip() or "API key"});
+        busy = False;
+        if not made["ok"] {
+            error = str(made["error"]);
+            return;
+        }
+        result: any = made["result"];
+        new_key = str(result.key);
+        name = "";
+        copied = "";
+        await load_keys();
+    }
+
+    async def revoke(id: str, label: str) -> None {
+        g: any = globalThis;
+        if not g.confirm("Revoke '" + label + "'? Anything using it stops working.") {
+            return;
+        }
+        busy = True;
+        done = await call_cloud("revoke_api_key", {"id": id});
+        busy = False;
+        if not done["ok"] {
+            error = str(done["error"]);
+            return;
+        }
+        await load_keys();
+    }
 
     async def copy(label: str, text: str) -> None {
         ok: bool = False;
@@ -33,6 +91,8 @@ def:pub ConnectPanel(account: str, onClose: Callable[[], None]) -> JsxElement {
         }
     }
 
+    env_block = "SHERRY_URL=" + origin + _NL + "SHERRY_API_KEY=" + (new_key or "<your key>");
+
     return
         <div
             className="modal-backdrop"
@@ -47,7 +107,7 @@ def:pub ConnectPanel(account: str, onClose: Callable[[], None]) -> JsxElement {
             >
                 <div className="modal-head">
                     <h2 id="connect-title" className="modal-title">
-                        Connect an AI assistant
+                        Connect apps and assistants
                     </h2>
                     <button
                         type="button"
@@ -60,13 +120,12 @@ def:pub ConnectPanel(account: str, onClose: Callable[[], None]) -> JsxElement {
                     </button>
                 </div>
                 <p className="modal-text">
-                    Capture your chats on chatgpt.com and claude.ai into Sherry. Paste the URL
-                    and key below into the Sherry browser extension (or, later, the Sherry MCP
-                    server). Everything captured shows up here with its source, and you can
-                    delete it any time.
+                    The browser extension, the desktop sync and AI connectors reach your
+                    Sherry with the address below and an API key. Create one key per app, so
+                    you can revoke each on its own.
                 </p>
                 <div className="field">
-                    <span className="field-label">Sherry API URL</span>
+                    <span className="field-label">Sherry URL</span>
                     <div className="copy-row">
                         <code className="copy-value">{origin}</code>
                         <button
@@ -78,55 +137,87 @@ def:pub ConnectPanel(account: str, onClose: Callable[[], None]) -> JsxElement {
                         </button>
                     </div>
                 </div>
-                <div className="field">
-                    <span className="field-label">
-                        API key for {account or "this account"}
-                    </span>
-                    <div className="copy-row">
-                        <code className="copy-value">
-                            {key if revealed else masked}
-                        </code>
-                        <button
-                            type="button"
-                            className="btn btn-sm btn-ghost"
-                            onClick={lambda e: MouseEvent { revealed = not revealed; }}
-                        >
-                            {"Hide" if revealed else "Show"}
-                        </button>
-                        <button
-                            type="button"
-                            className="btn btn-sm"
-                            onClick={lambda e: MouseEvent { copy("key", key); }}
-                        >
-                            {"Copied" if copied == "key" else "Copy"}
-                        </button>
+                {if new_key {
+                    <div key="new-key" className="field">
+                        <span className="field-label">New API key: copy it now, it won't be shown again</span>
+                        <div className="copy-row">
+                            <code className="copy-value">{new_key}</code>
+                            <button
+                                type="button"
+                                className="btn btn-sm btn-primary"
+                                onClick={lambda e: MouseEvent { copy("key", new_key); }}
+                            >
+                                {"Copied" if copied == "key" else "Copy"}
+                            </button>
+                        </div>
+                        <pre className="code-block">{env_block}</pre>
+                        <div>
+                            <button
+                                type="button"
+                                className="btn btn-sm"
+                                onClick={lambda e: MouseEvent { copy("env", env_block); }}
+                            >
+                                {"Copied" if copied == "env" else "Copy for the desktop sync"}
+                            </button>
+                        </div>
                     </div>
-                </div>
-                <div className="field">
-                    <span className="field-label">Environment (MCP server / scripts)</span>
-                    <pre className="code-block">
-                        {"SHERRY_API_URL=" + origin + _NL + "SHERRY_API_KEY=" + (
-                            key if revealed else masked
-                        )}
-                    </pre>
-                    <div>
-                        <button
-                            type="button"
-                            className="btn btn-sm"
-                            onClick={lambda e: MouseEvent { copy("env", env_block); }}
-                        >
-                            {"Copied" if copied == "env" else "Copy environment"}
-                        </button>
-                    </div>
-                </div>
-                {if copied == "failed" {
+                }}
+                <form className="key-create" onSubmit={create_key}>
+                    <input
+                        className="input"
+                        placeholder="Key name, e.g. Browser extension"
+                        maxLength={60}
+                        value={name}
+                        onChange={lambda e: ChangeEvent { name = e.target.value; }}
+                        aria-label="Key name"
+                    />
+                    <button type="submit" className="btn btn-primary" disabled={busy}>
+                        {"Creating…" if busy else "Create key"}
+                    </button>
+                </form>
+                {if error {
+                    <div key="err" className="alert alert-error" role="alert">{error}</div>
+                } elif copied == "failed" {
                     <div key="copy-failed" className="alert alert-warn" role="status">
                         Your browser blocked copying. Select the text and copy it manually.
                     </div>
                 }}
+                <div className="field">
+                    <span className="field-label">Your API keys</span>
+                    {if loading {
+                        <p key="loading" className="modal-text">Loading…</p>
+                    } elif len(keys) == 0 {
+                        <p key="none" className="modal-text">No keys yet.</p>
+                    } else {
+                        <ul key="list" className="key-list">
+                            {[
+                                <li key={k["id"]} className="key-row">
+                                    <div className="key-main">
+                                        <span className="key-name">{k["name"]}</span>
+                                        <span className="mono">{str(k["prefix"]) + "…"}</span>
+                                    </div>
+                                    <span className="key-meta">
+                                        {"used " + relative_time(str(k["lastUsedAt"]), Date.now())
+                                            if k["lastUsedAt"]
+                                            else "never used"}
+                                    </span>
+                                    <button
+                                        type="button"
+                                        className="btn btn-sm btn-ghost"
+                                        onClick={lambda e: MouseEvent { revoke(str(k["id"]), str(k["name"])); }}
+                                        disabled={busy}
+                                    >
+                                        Revoke
+                                    </button>
+                                </li> for k in keys
+                            ]}
+                        </ul>
+                    }}
+                </div>
                 <div className="alert alert-warn" role="note">
                     <span className="alert-body">
-                        This key gives full access to your memories. Only paste it into tools you trust. It is tied to your account and can't be revoked separately yet.
+                        A key gives full access to the memories of {account or "this account"}.
+                        Only paste it into tools you trust, and revoke it if it leaks.
                     </span>
                 </div>
             </div>

@@ -12,7 +12,8 @@ Sync model (TECHNICAL.md section 14, timed-refresh fallback):
 """
 
 import from react { useEffect }
-import from "@jac/runtime" { jacLogout, __jacClearCache }
+import from "@jac/runtime" { __jacClearCache }
+import from ..lib.supabase { sign_out as end_session, refresh_session }
 import from .Icon { Icon }
 import from .Composer { Composer }
 import from .MemoryCard { MemoryCard }
@@ -148,8 +149,8 @@ def:pub Library(account: str, onSignOut: Callable[[], None]) -> JsxElement {
     async def remove_memory(id: str) -> None;
     async def undo_delete(id: str) -> None;
     async def reset_workspace -> None;
-    def sign_out;
-    def handle_expired;
+    async def sign_out -> None;
+    async def handle_expired -> None;
     def handle_global_key(e: KeyboardEvent);
     def open_memory(id: str);
     def close_detail;
@@ -225,7 +226,7 @@ def:pub Library(account: str, onSignOut: Callable[[], None]) -> JsxElement {
                                     connect_open = True;
                                 }}
                             >
-                                Connect an AI assistant
+                                Connect apps and assistants
                             </button>
                             {if demo {
                                 <button
@@ -384,7 +385,7 @@ def:pub Library(account: str, onSignOut: Callable[[], None]) -> JsxElement {
                                 className="btn"
                                 onClick={lambda e: MouseEvent { connect_open = True; }}
                             >
-                                Connect an AI assistant
+                                Connect apps and assistants
                             </button>
                         </div>
                     } else {
