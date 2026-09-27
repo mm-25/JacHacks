@@ -6,6 +6,7 @@ import from react { useEffect }
 import from .Icon { Icon }
 import from .Dashboard { Dashboard }
 import from .Library { Library }
+import from .ChatMemory { ChatMemory }
 import from .Conversations { Conversations }
 import from .Diagnostics { Diagnostics }
 import from .ConnectPanel { ConnectPanel }
@@ -13,10 +14,10 @@ import from ..lib.supabase { sign_out as end_session, refresh_session }
 
 glob PAGES: list[dict] = [
     {"id": "dashboard", "label": "Dashboard", "icon": "dashboard"},
-    {"id": "chat", "label": "Chat Memory", "icon": "panel"},
+    {"id": "chat", "label": "Chat Memory", "icon": "message-square"},
     {"id": "personal", "label": "Personal Memory", "icon": "sparkles"},
-    {"id": "conversations", "label": "Connected Conversations", "icon": "branch"},
-    {"id": "diagnostics", "label": "Diagnostics", "icon": "chart"}
+    {"id": "conversations", "label": "Connected Conversations", "icon": "git-merge"},
+    {"id": "diagnostics", "label": "Diagnostics", "icon": "activity"}
 ];
 glob PAGE_IDS: list[str] = ["dashboard", "chat", "personal", "conversations", "diagnostics"];
 glob COLLAPSED_KEY: str = "sherry.sidebar.collapsed";
@@ -173,7 +174,7 @@ def:pub Workspace(account: str, onSignOut: Callable[[], None]) -> JsxElement {
                 {if page == "dashboard" {
                     <Dashboard key={"dashboard-" + str(epoch)} onNavigate={go} onExpired={handle_expired}/>
                 } elif page == "chat" {
-                    <Library key={"chat-" + str(epoch)} account={account} kind="chat" title="Chat Memory" onConnect={lambda { connect_open = True; }} onSignOut={onSignOut}/>
+                    <ChatMemory key={"chat-" + str(epoch)} onConnect={lambda { connect_open = True; }} onExpired={handle_expired}/>
                 } elif page == "personal" {
                     <Library key={"personal-" + str(epoch)} account={account} kind="personal" title="Personal Memory" onConnect={lambda { connect_open = True; }} onSignOut={onSignOut}/>
                 } elif page == "conversations" {

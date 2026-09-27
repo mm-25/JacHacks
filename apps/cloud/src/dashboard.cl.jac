@@ -7,7 +7,8 @@
   recalled most often (migrations/0003_usage.sql).
 """
 
-import from .util { now_iso, now_seconds, new_id, text_of, int_of, query_all, query_one, execute, statement }
+import from .util { now_iso, now_seconds, new_id, text_of, int_of, query_all, query_one, execute, statement, construct }
+import from .memories { delete_memory, forget_conversation }
 import from .auth { Principal }
 
 glob ASSISTANTS: list[str] = ["claude", "chatgpt", "gemini", "codex", "antigravity"];
@@ -290,20 +291,63 @@ async def:pub dashboard_stats(env: any, who: Principal, ws: str, body: any) -> d
 }
 
 
+glob DEVICE_CHANNELS: dict = {"browser": "extension", "desktop": "desktop", "mobile": "mobile"};
+
+
+def _like_term(term: str) -> str {
+    return "%" + term.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%";
+}
+
+
+"""Captured chats, most recently active first (Chat Memory and Connected
+Conversations pages). Optional filters: `query` (words in the title, project or
+messages), `platform`, `device` (browser | desktop | mobile) and `days`."""
 async def:pub list_conversations(env: any, who: Principal, ws: str, body: any) -> dict {
     start = max(0, int_of(text_of(body.cursor), 0));
     size = max(1, min(int_of(body.limit, 25), 100));
-    total_row: any = await query_one(
-        env, "SELECT COUNT(*) AS n FROM conversations WHERE user_id = ? AND ignored = 0", [who.userId]
-    );
+    where = "c.user_id = ? AND c.ignored = 0";
+    params: list = [who.userId];
+    platform = text_of(body.platform).strip().lower();
+    if platform {
+        where += " AND c.platform = ?";
+        params.append(platform);
+    }
+    device = text_of(body.device).strip().lower();
+    if device {
+        where += " AND c.captured_via = ?";
+        params.append(DEVICE_CHANNELS.get(device, device));
+    }
+    days = int_of(body.days, 0);
+    if days > 0 {
+        cutoff: any = construct("Date", [Date.now() - days * 86400000]);
+        where += " AND c.updated_at >= ?";
+        params.append(cutoff.toISOString());
+    }
+    for term in text_of(body.query).strip().lower().split(" ") {
+        if not term {
+            continue;
+        }
+        like = _like_term(term);
+        where += (
+            " AND (lower(c.title) LIKE ? ESCAPE '\\' OR lower(c.context) LIKE ? ESCAPE '\\' "
+            + "OR EXISTS (SELECT 1 FROM messages x WHERE x.conversation_id = c.id AND lower(x.text) LIKE ? ESCAPE '\\'))"
+        );
+        params.append(like);
+        params.append(like);
+        params.append(like);
+    }
+    total_row: any = await query_one(env, "SELECT COUNT(*) AS n FROM conversations c WHERE " + where, params);
     total = int_of(total_row.n if total_row else 0, 0);
     rows = await query_all(
         env,
         "SELECT c.id, c.platform, c.title, c.url, c.context, c.captured_via, c.created_at, c.updated_at, "
-        + "c.summary_engine, (SELECT COUNT(*) FROM messages WHERE conversation_id = c.id) AS messages "
-        + "FROM conversations c WHERE c.user_id = ? AND c.ignored = 0 "
-        + "ORDER BY c.updated_at DESC LIMIT " + str(size) + " OFFSET " + str(start),
-        [who.userId]
+        + "c.summary_engine, (SELECT COUNT(*) FROM messages WHERE conversation_id = c.id) AS messages, "
+        + "(SELECT substr(text, 1, 2000) FROM messages WHERE conversation_id = c.id AND role = 'user' "
+        + "ORDER BY position LIMIT 1) AS first_message, "
+        + "(SELECT id FROM memories WHERE user_id = c.user_id AND conversation_id = c.id AND deleted_at = '' LIMIT 1) AS summary_id "
+        + "FROM conversations c WHERE " + where
+        + " ORDER BY c.updated_at DESC LIMIT " + str(size) + " OFFSET " + str(start),
+        params
     );
     items: list = [];
     for r in rows {
@@ -315,10 +359,35 @@ async def:pub list_conversations(env: any, who: Principal, ws: str, body: any) -
             "context": text_of(r.context),
             "capturedVia": text_of(r.captured_via),
             "messages": int_of(r.messages, 0),
+            "firstMessage": text_of(r.first_message),
+            "summaryId": text_of(r.summary_id) or None,
             "summaryEngine": text_of(r.summary_engine),
             "createdAt": text_of(r.created_at),
             "updatedAt": text_of(r.updated_at)
         });
     }
     return {"data": items, "nextCursor": str(start + size) if start + size < total else None, "total": total};
+}
+
+
+"""Delete a captured chat everywhere: its summary memory (soft delete, so
+`restore_memory` can undo it) and its transcript; capture stops for it.
+Returns {deleted, memoryId}."""
+async def:pub delete_conversation(env: any, who: Principal, ws: str, body: any) -> dict {
+    id = text_of(body.id);
+    owned: any = await query_one(env, "SELECT id FROM conversations WHERE id = ? AND user_id = ?", [id, who.userId]);
+    if not owned {
+        return {"deleted": False, "memoryId": None};
+    }
+    summary: any = await query_one(
+        env,
+        "SELECT id FROM memories WHERE user_id = ? AND conversation_id = ? AND deleted_at = '' LIMIT 1",
+        [who.userId, id]
+    );
+    if summary {
+        await delete_memory(env, who, ws, {"id": text_of(summary.id)});
+        return {"deleted": True, "memoryId": text_of(summary.id)};
+    }
+    await forget_conversation(env, who, id, True);
+    return {"deleted": True, "memoryId": None};
 }

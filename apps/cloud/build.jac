@@ -51,9 +51,30 @@ with entry {
     } except ImportError {
         env["SSL_CERT_FILE"] = env.get("SSL_CERT_FILE", "");
     }
-    # Web build skipped because jac build is no longer available in this CLI version.
-    # We assume the user has already built the assets previously or will use an alternative.
+    # `jac build` needs the jac-client plugin (pip install -r apps/requirements.txt into
+    # the repo's .venv). Without it, keep the web files already built; never deploy an
+    # empty site.
     dist_dir = web / ".jac" / "client" / "dist";
-    dist_dir.mkdir(parents=True, exist_ok=True);
-    print("Skipped web build. Ensured apps/web/.jac/client/dist exists.");
+    backup = base_dir / "build" / "previous-dist";
+    if (dist_dir / "index.html").exists() {
+        shutil.copytree(dist_dir, backup);
+    }
+    built = subprocess.run(
+        [jac, "build", "--client", "static", "main.jac"],
+        cwd=str(web), env=env, capture_output=True, text=True
+    );
+    if built.returncode == 0 {
+        print("built web app -> apps/web/.jac/client/dist");
+    } elif (backup / "index.html").exists() {
+        shutil.rmtree(dist_dir, ignore_errors=True);
+        shutil.copytree(backup, dist_dir);
+        print("WARNING: web build failed, so the web app keeps its previous build.");
+        print("  To build it: from the repo root, .venv/bin/pip install -r apps/requirements.txt");
+        print("  " + (built.stderr or built.stdout).strip()[-400:]);
+    } else {
+        raise RuntimeError(
+            "web build failed and there is no previous build to deploy:\n"
+            + built.stdout[-2000:] + "\n" + built.stderr[-2000:]
+        );
+    }
 }

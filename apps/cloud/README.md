@@ -62,7 +62,8 @@ New here:
 | `list_api_keys` | web app session only | `[{id, name, prefix, createdAt, lastUsedAt}]` |
 | `revoke_api_key` `{id}` | web app session only | `bool` |
 | `dashboard_stats` | anyone signed in | Everything the Dashboard and Diagnostics pages show: chats per assistant, tool mix, use cases, recalls, lookups, top platform, pipeline health |
-| `list_conversations` `{cursor, limit}` | anyone signed in | `{data: [{id, platform, title, url, context, capturedVia, messages, updatedAt, …}], nextCursor, total}` |
+| `list_conversations` `{cursor, limit, query, platform, device, days}` | anyone signed in | Captured chats, most recently active first: `{data: [{id, platform, title, url, context, capturedVia, messages, firstMessage, summaryId, updatedAt, …}], nextCursor, total}`. `device` is `browser`, `desktop` or `mobile`; `days` limits to recent activity |
+| `delete_conversation` `{id}` | anyone signed in | Deletes a chat's summary and transcript and stops capturing it: `{deleted, memoryId}`. `restore_memory {id: memoryId}` undoes it (the transcript comes back as the chat is captured again) |
 
 `list_memories` also takes `kind`: `"chat"` (summaries of captured chats) or `"personal"`
 (everything else). The connector records every lookup (`memory_lookups`) and bumps each
