@@ -163,7 +163,7 @@ async def:pub list_memories(env: any, who: Principal, ws: str, body: any) -> dic
     rows = await query_all(
         env,
         f"SELECT {MEMORY_COLUMNS}, ({score}) AS score FROM memories WHERE {where} "
-        + f"ORDER BY score DESC, created_at DESC LIMIT {size} OFFSET {start}",
+        + f"ORDER BY score DESC, updated_at DESC LIMIT {size} OFFSET {start}",
         params
     );
     next_cursor: any = str(start + size) if start + size < total else None;

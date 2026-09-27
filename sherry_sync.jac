@@ -221,7 +221,7 @@ obj SherrySync {
             data=json.dumps(body).encode("utf-8"),
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {self.api_key}"
+                "Authorization": f"Bearer {self.api_key}", "User-Agent": "SherrySync/1.0"
             },
             method="POST"
         );
