@@ -1,5 +1,8 @@
 # Sherry on Cloudflare (Workers + D1) with Supabase login
 
+Live at **https://sherry.sherry-cloud.workers.dev**. It serves the web app, the API
+(`/function/<name>`) and the claude.ai / ChatGPT / Gemini connector (`/mcp`).
+
 The hosted Sherry backend. It serves the same API as the Jac server in `apps/web`
 (`POST /function/<name>`, same request and response shapes, see
 `data-schema-specification.md`), so every Sherry app only needs a new address and key.
@@ -24,6 +27,25 @@ Supabase Auth ◀── sign up / sign in (web app)
   only their SHA-256 hash is stored. A key can't be used to create more keys.
 - **Summaries:** Claude via the official Anthropic TypeScript SDK when the Worker has an
   `ANTHROPIC_API_KEY` secret; otherwise a basic summary.
+
+## MCP connector (`/mcp`)
+
+This is the connector from `apps/mcp`, now running on the Worker, with the same five tools
+(`save_memory`, `search_memories`, `list_recent_memories`, `get_memory`, `delete_memory`)
+and the same instructions. Add `https://sherry.sherry-cloud.workers.dev/mcp` as a custom
+connector in claude.ai, ChatGPT (developer mode) or Gemini (custom apps).
+
+- **Sign-in:** OAuth 2.1. The assistant registers itself (DCR), then the user signs in on
+  Sherry's page, which checks the email and password with Supabase. The assistant then
+  exchanges a one-time code (PKCE S256) for tokens. Access tokens last 8 hours and refresh
+  tokens 30 days; a refresh rotates both. Everything is stored hashed in D1
+  (`migrations/0002`).
+- **Protocol:** Streamable HTTP without sessions, using the initialize-handshake revisions up
+  to 2025-11-25. A 2026-07-28 client's `server/discover` probe gets "method not found",
+  and the client falls back to the handshake, as the official SDK does. Tested with the
+  official Python SDK in both modes.
+- **Which assistant saved it:** taken from the name the assistant registered with (Claude,
+  ChatGPT, Gemini).
 
 ## Endpoints
 

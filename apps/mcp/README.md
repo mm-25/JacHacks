@@ -1,5 +1,9 @@
 # Sherry MCP server (Jac)
 
+> **Superseded by the hosted connector:** use `https://sherry.sherry-cloud.workers.dev/mcp`
+> (see `apps/cloud/README.md`). It needs no laptop or tunnel. This local server still
+> works against the old local Jac server.
+
 This server lets **claude.ai** and **ChatGPT** save to and search your Sherry
 memory. The assistant decides when to call the tools; you can also ask it
 directly ("save this chat to Sherry", "what did I decide about X?").

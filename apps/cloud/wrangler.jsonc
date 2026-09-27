@@ -8,7 +8,7 @@
   "assets": {
     "directory": "../web/.jac/client/dist",
     "binding": "ASSETS",
-    "run_worker_first": ["/function/*"],
+    "run_worker_first": ["/function/*", "/mcp", "/mcp/*", "/.well-known/*", "/register", "/authorize", "/token", "/revoke"],
     "not_found_handling": "single-page-application"
   },
   "d1_databases": [
@@ -21,7 +21,10 @@
   ],
   "vars": {
     // https://<project>.supabase.co - Supabase project that owns the logins.
-    "SUPABASE_URL": "https://uddwarzmnyuktwgzvbpd.supabase.co"
+    "SUPABASE_URL": "https://uddwarzmnyuktwgzvbpd.supabase.co",
+    // Publishable key (safe to share): lets the connector sign-in page check
+    // email + password with Supabase.
+    "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_00WzhaTLVhUsZpIAYg9Ytg_ZwQlMNRp"
   }
   // Secrets (set with `npx wrangler secret put <NAME>`, never in this file):
   //   ANTHROPIC_API_KEY    enables Claude-written chat summaries

@@ -26,6 +26,18 @@ import from .memories {
 }
 import from .captures { capture_conversation, summarize_conversation, get_conversation }
 import from .keys { create_api_key, list_api_keys, revoke_api_key }
+import from .oauth {
+    protected_resource_metadata,
+    authorization_server_metadata,
+    register_client,
+    authorize_start,
+    authorize_submit,
+    token,
+    revoke,
+    mcp_caller,
+    unauthorized_mcp
+}
+import from .mcp { handle_mcp }
 
 glob CORS: dict = {
     "Access-Control-Allow-Origin": "*",
@@ -151,6 +163,35 @@ async def:pub handle(request: any, env: any, ctx: any) -> any {
     }
     if path.startswith("/function/") {
         return await _function(request, env, path[len("/function/"):]);
+    }
+    # ---- MCP connector (claude.ai, ChatGPT, Gemini) and its OAuth ----
+    if path == "/mcp" or path == "/mcp/" {
+        caller = await mcp_caller(request, env);
+        if caller is None {
+            return unauthorized_mcp(request);
+        }
+        return await handle_mcp(request, env, caller);
+    }
+    if path.startswith("/.well-known/oauth-protected-resource") {
+        return protected_resource_metadata(request);
+    }
+    if path.startswith("/.well-known/oauth-authorization-server") or path.startswith("/.well-known/openid-configuration") {
+        return authorization_server_metadata(request);
+    }
+    if path == "/register" and request.method == "POST" {
+        return await register_client(request, env);
+    }
+    if path == "/authorize" {
+        if request.method == "POST" {
+            return await authorize_submit(request, env);
+        }
+        return await authorize_start(request, env);
+    }
+    if path == "/token" and request.method == "POST" {
+        return await token(request, env);
+    }
+    if path == "/revoke" and request.method == "POST" {
+        return await revoke(request, env);
     }
     if env.ASSETS {
         return await env.ASSETS.fetch(request);

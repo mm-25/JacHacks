@@ -114,15 +114,20 @@ Anything else is rejected with a clear error.
 
 ## 4. Writing and reading (for app developers)
 
-- **Base URL:** the Sherry server. It's `http://localhost:8000` locally; the
-  shared hosted URL will be announced once it's deployed.
+- **Base URL:** `https://sherry.sherry-cloud.workers.dev`. This is the hosted Sherry
+  (Cloudflare Worker + D1, in `apps/cloud`); it's always on.
+  `http://localhost:8000` is only the old local Jac server.
 - **Requests:** every call is `POST <base>/function/<name>` with a JSON body.
-- **Auth:** add `Authorization: Bearer <API key>` to every call. The API key is
-  in Sherry web → account menu → **Connect an AI assistant**. You can also get
-  one from `POST /user/login` with
-  `{"identity":{"type":"username","value":EMAIL},"credential":{"type":"password","password":PW}}`,
-  which returns `data.token`.
+- **Auth:** add `Authorization: Bearer <API key>` to every call.
+  - **Apps without a login screen** (extension, desktop sync, scripts): use a Sherry API
+    key (`shr_…`). Create it in Sherry web → account menu → **Connect apps and
+    assistants** → **Create key**. It's shown once and can be revoked there.
+  - **Apps with a login screen** (mobile): sign the user in with Supabase Auth
+    (email + password, same project as the web app) and send the Supabase access token.
+    Refresh it before it expires, which is about an hour.
 - **Response:** `{"ok": true, "data": {"result": ...}}`.
+  - Also available: `whoami`, and (web sessions only) `create_api_key`, `list_api_keys`
+    and `revoke_api_key`.
   - A rejected input comes back as `{"data": {"error": "message"}}`, with HTTP 200.
   - A bad key comes back as HTTP 401.
 
