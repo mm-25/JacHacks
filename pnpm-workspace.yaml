@@ -1,5 +1,6 @@
 packages:
   - "apps/*"
+  - "desktop-app"
   - "packages/*"
 minimumReleaseAgeExclude:
   - '@tauri-apps/api@2.12.0'
