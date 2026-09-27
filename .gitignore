@@ -1,0 +1,6 @@
+node_modules/
+.jac/
+*.log
+*.err
+.DS_Store
+.env
