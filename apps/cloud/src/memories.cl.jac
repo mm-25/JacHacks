@@ -97,30 +97,66 @@ def _like(needle: str) -> str {
 }
 
 
-"""List active memories, newest first, with optional case-insensitive search."""
+# Words that carry no meaning for search ("what is my favorite animal" -> favorite, animal).
+glob STOP_WORDS: list[str] = [
+    "the", "and", "for", "are", "was", "were", "what", "which", "who", "whom", "whose",
+    "when", "where", "why", "how", "you", "your", "yours", "my", "mine", "me", "our", "ours",
+    "his", "her", "hers", "its", "their", "them", "they", "this", "that", "these", "those",
+    "with", "from", "about", "into", "have", "has", "had", "does", "did", "do", "can", "could",
+    "should", "would", "will", "shall", "not", "any", "all", "some", "there", "here", "just",
+    "tell", "know", "remember", "sherry", "please", "also", "then", "than", "is", "am", "be",
+    "o", "a", "de", "do", "da", "que", "qual", "meu", "minha", "sobre", "com", "para"
+];
+glob MAX_TERMS: int = 8;
+
+
+"""Search words from a query: lowercased, punctuation trimmed, stop words and
+1-letter words dropped. A query of only stop words searches as one phrase."""
+def _terms(needle: str) -> list[str] {
+    terms: list[str] = [];
+    for raw in needle.split() {
+        word = raw.strip(".,;:!?()[]{}\"'`“”‘’");
+        if len(word) < 2 or word in STOP_WORDS or word in terms {
+            continue;
+        }
+        terms.append(word);
+    }
+    if len(terms) == 0 {
+        return [needle];
+    }
+    return terms[:MAX_TERMS];
+}
+
+
+"""List active memories, newest first. With a query, memories matching any of
+its words are returned, those matching the most words first (then newest)."""
 async def:pub list_memories(env: any, who: Principal, ws: str, body: any) -> dict {
     needle = text_of(body.query).strip().lower();
     cursor = text_of(body.cursor);
     start = int_of(cursor, 0) if cursor else 0;
     start = max(0, start);
     size = max(1, min(int_of(body.limit, DEFAULT_LIMIT), MAX_LIMIT));
-    where = "user_id = ? AND deleted_at = ''";
     params: list = [who.userId];
+    score = "0";
     if needle {
-        pattern = _like(needle);
-        where += (
-            " AND (lower(content) LIKE ?2 ESCAPE '\\' OR lower(source_label) LIKE ?2 ESCAPE '\\'"
-            + " OR source_platform LIKE ?2 ESCAPE '\\' OR lower(source_context) LIKE ?2 ESCAPE '\\'"
-            + " OR lower(tags) LIKE ?2 ESCAPE '\\')"
+        haystack = (
+            "(lower(content) || ' ' || lower(source_label) || ' ' || source_platform || ' ' "
+            + "|| lower(source_context) || ' ' || lower(tags))"
         );
-        where = where.replace("user_id = ?", "user_id = ?1");
-        params.append(pattern);
+        parts: list[str] = [];
+        for term in _terms(needle) {
+            params.append(_like(term));
+            parts.append(f"(CASE WHEN {haystack} LIKE ?{len(params)} ESCAPE '\\' THEN 1 ELSE 0 END)");
+        }
+        score = " + ".join(parts);
     }
+    where = "user_id = ?1 AND deleted_at = ''" + (f" AND ({score}) > 0" if needle else "");
     total_row: any = await query_one(env, f"SELECT COUNT(*) AS n FROM memories WHERE {where}", params);
     total = int_of(total_row.n if total_row else 0, 0);
     rows = await query_all(
         env,
-        f"SELECT {MEMORY_COLUMNS} FROM memories WHERE {where} ORDER BY created_at DESC LIMIT {size} OFFSET {start}",
+        f"SELECT {MEMORY_COLUMNS}, ({score}) AS score FROM memories WHERE {where} "
+        + f"ORDER BY score DESC, created_at DESC LIMIT {size} OFFSET {start}",
         params
     );
     next_cursor: any = str(start + size) if start + size < total else None;
