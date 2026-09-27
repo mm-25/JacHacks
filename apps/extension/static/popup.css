@@ -1,0 +1,83 @@
+@import url("https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400&display=swap");
+
+/* Same design language as the Sherry web app (apps/web/styles/global.css). */
+:root {
+  --canvas: #ffffff; --canvas-soft: #fafafa; --canvas-soft-2: #f5f5f5;
+  --hairline: #ebebeb; --hairline-strong: #a1a1a1;
+  --ink: #171717; --body: #4d4d4d; --mute: #888888;
+  --primary: #171717; --primary-hover: #383838; --on-primary: #ffffff;
+  --link: #0070f3; --ok: #0070f3; --danger: #ee0000; --focus: #0070f3;
+  --ring: 0 0 0 1px rgba(0, 0, 0, 0.08);
+  --shadow-2: 0 1px 1px rgba(0, 0, 0, 0.02), 0 2px 2px rgba(0, 0, 0, 0.04), var(--ring);
+  --font: "Geist", "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --canvas: #0a0a0a; --canvas-soft: #000000; --canvas-soft-2: #1a1a1a;
+    --hairline: #2e2e2e; --hairline-strong: #5c5c5c;
+    --ink: #ededed; --body: #a1a1a1; --mute: #7a7a7a;
+    --primary: #ededed; --primary-hover: #cfcfcf; --on-primary: #0a0a0a;
+    --link: #52a8ff; --ok: #52a8ff; --danger: #ff6166; --focus: #52a8ff;
+    --ring: 0 0 0 1px rgba(255, 255, 255, 0.10);
+    --shadow-2: 0 1px 1px rgba(0, 0, 0, 0.4), 0 2px 2px rgba(0, 0, 0, 0.4), var(--ring);
+    color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; width: 340px; padding: 16px;
+  background: var(--canvas-soft); color: var(--ink);
+  font: 13px/1.5 var(--font);
+  -webkit-font-smoothing: antialiased;
+}
+.head { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+.logo {
+  width: 28px; height: 28px; border-radius: 6px; display: grid; place-items: center;
+  background: var(--primary); color: var(--on-primary);
+  font: 600 15px var(--font); letter-spacing: -0.6px;
+}
+.wordmark { font: 600 16px/20px var(--font); letter-spacing: -0.6px; }
+.sub { color: var(--body); font-size: 12px; line-height: 16px; }
+.card {
+  background: var(--canvas); border-radius: 8px; box-shadow: var(--shadow-2);
+  padding: 12px; margin-bottom: 8px;
+}
+.card-title {
+  margin: 0 0 8px; font: 400 11px/16px var(--mono);
+  text-transform: uppercase; color: var(--body);
+}
+p { margin: 4px 0; }
+.small { font-size: 12px; line-height: 16px; }
+.muted { color: var(--body); }
+.ok { color: var(--ok); }
+.err { color: var(--danger); }
+.label { display: block; font-weight: 500; font-size: 12px; margin: 8px 0 4px; color: var(--body); }
+.input {
+  width: 100%; height: 32px; padding: 0 10px; border-radius: 6px;
+  border: 1px solid var(--hairline); background: var(--canvas); color: var(--ink);
+  font: 13px var(--font);
+}
+.input:hover { border-color: var(--hairline-strong); }
+.input:focus {
+  outline: none; border-color: var(--hairline-strong);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--focus) 18%, transparent);
+}
+.input::placeholder { color: var(--mute); }
+.row { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+.btn {
+  border: none; background: var(--canvas); color: var(--ink); box-shadow: var(--ring);
+  border-radius: 6px; height: 32px; padding: 0 12px;
+  font: 500 13px var(--font); letter-spacing: -0.28px; cursor: pointer;
+}
+.btn:hover:not(:disabled) { background: var(--canvas-soft-2); }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+.btn-primary {
+  background: var(--primary); color: var(--on-primary); box-shadow: none;
+  width: 100%; margin-top: 8px;
+}
+.btn-primary:hover:not(:disabled) { background: var(--primary-hover); }
+.btn:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.toggle { display: flex; align-items: center; gap: 8px; padding: 3px 0; }
+.toggle input { accent-color: var(--primary); }

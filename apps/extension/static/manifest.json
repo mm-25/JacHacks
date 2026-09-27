@@ -1,0 +1,30 @@
+{
+  "manifest_version": 3,
+  "name": "Sherry – AI chat memory",
+  "short_name": "Sherry",
+  "version": "0.1.0",
+  "description": "Captures your ChatGPT and Claude conversations into your Sherry memory and keeps a summary of each chat.",
+  "permissions": ["storage"],
+  "host_permissions": [
+    "https://chatgpt.com/*",
+    "https://chat.openai.com/*",
+    "https://claude.ai/*",
+    "http://localhost/*",
+    "http://127.0.0.1/*"
+  ],
+  "optional_host_permissions": ["https://*/*"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://chatgpt.com/*", "https://chat.openai.com/*", "https://claude.ai/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_title": "Sherry",
+    "default_popup": "popup.html"
+  }
+}
