@@ -53,7 +53,7 @@ with entry {
     }
     # Web build skipped because jac build is no longer available in this CLI version.
     # We assume the user has already built the assets previously or will use an alternative.
-    dist_dir = web / ".jac" / "client" / "dist"
-    dist_dir.mkdir(parents=True, exist_ok=True)
+    dist_dir = web / ".jac" / "client" / "dist";
+    dist_dir.mkdir(parents=True, exist_ok=True);
     print("Skipped web build. Ensured apps/web/.jac/client/dist exists.");
 }
