@@ -15,11 +15,9 @@ import from ..lib.supabase { sign_out as end_session, refresh_session }
 glob PAGES: list[dict] = [
     {"id": "dashboard", "label": "Dashboard", "icon": "dashboard"},
     {"id": "chat", "label": "Chat Memory", "icon": "message-square"},
-    {"id": "personal", "label": "Personal Memory", "icon": "sparkles"},
-    {"id": "conversations", "label": "Connected Conversations", "icon": "git-merge"},
-    {"id": "diagnostics", "label": "Diagnostics", "icon": "activity"}
+    {"id": "personal", "label": "Personal Memory", "icon": "sparkles"}
 ];
-glob PAGE_IDS: list[str] = ["dashboard", "chat", "personal", "conversations", "diagnostics"];
+glob PAGE_IDS: list[str] = ["dashboard", "chat", "personal"];
 glob COLLAPSED_KEY: str = "sherry.sidebar.collapsed";
 glob PENDING_STORAGE_KEY: str = "sherry.pending.v1";
 
